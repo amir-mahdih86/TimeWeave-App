@@ -1,16 +1,19 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  
+  app.get('/api/health', async (req, res) => {
+    res.json({ status: "ok" });
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // The application is offline-first. 
+  // All logic is handled client-side with IndexedDB/LocalStorage.
+  // This server primarily acts as a static file host for the PWA.
 
   return httpServer;
 }
