@@ -1,0 +1,134 @@
+Create a fully functional Progressive Web App (PWA) called TimeWeave – Smart Weekly Planner using modern, clean, and readable code.
+
+### General requirements
+
+* The app must work fully offline
+* Use LocalStorage or IndexedDB for data persistence
+* Include PWA support (manifest.json + service worker)
+* Clean, minimal UI (mobile-first)
+* No authentication or backend (offline-only app)
+* Code should be well-structured and commented
+
+---
+
+### Core concept
+
+The app is a daily/weekly planner based on time slots.
+
+Users manage two types of tasks:
+
+#### 1. Fixed tasks (weekly recurring)
+
+* Repeated every week on selected weekdays
+* Each task has:
+
+  * start time
+  * end time
+  * description
+* Example: college classes
+* Stored once and automatically applied to every week
+
+#### 2. Non-fixed tasks (one-time)
+
+* Added for a specific date
+* Not repeated weekly
+* Same fields: start time, end time, description
+
+---
+
+### Exception handling (important)
+
+* Fixed tasks can be modified or removed for a specific date only
+* Example: a class is canceled on one day
+* The original fixed task must remain unchanged
+* Store per-date overrides (removal or modification)
+
+---
+
+### Daily view behavior
+
+* User selects a day
+* App displays:
+
+  * All tasks for that day (fixed + non-fixed, applying exceptions)
+  * Automatically calculated free time slots
+* Tasks must be sorted by time
+
+#### Interaction
+
+* Clicking a task:
+
+  * Shows task details
+  * Description editable
+  * Remove option
+  * Toggle “Is Done” checkbox
+* Clicking a free time slot:
+
+  * Opens “Add new task” page
+  * Start and end times pre-filled based on the free slot
+
+---
+
+### Task completion
+
+* Each task instance (per day) has an “is done” status
+* Completion applies only to that specific day
+* Visually distinguish completed tasks
+
+---
+
+### Reports page
+
+Create a Reports section with the following:
+
+#### Report types
+
+* Daily report
+* Weekly report
+* Monthly report
+* Custom date range report
+
+#### Report data
+
+* Total tasks
+* Completed tasks
+* Completion percentage
+* Total busy time
+* Total free time
+
+#### Visualization
+
+* Simple charts or progress indicators (optional but preferred)
+* Data must be calculated from stored tasks and completion states
+
+---
+
+### Validation & logic
+
+* Prevent overlapping tasks
+* Show a warning if time conflicts exist
+* Ensure start time is before end time
+
+---
+
+### UI pages
+
+* Weekly planner view
+* Day detail view
+* Add/edit task page
+* Reports page
+* Settings page (optional: start of week, time format)
+
+---
+
+### Final output
+
+* Provide a complete runnable project
+* Include:
+
+  * index.html
+  * CSS
+  * JavaScript
+  * service worker
+  * manifest.json
+* App must be installable as a PWA and ready to be wrapped into an APK using Trusted Web Activity (TWA)
