@@ -5,13 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Clock, Calendar, Trash2 } from "lucide-react";
+import { Settings as SettingsIcon, Clock, Calendar, Trash2, Loader2, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSettings } from "@/hooks/use-settings";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings();
+  const queryClient = useQueryClient();
   const [clearDataConfirm, setClearDataConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [clearSuccess, setClearSuccess] = useState(false);
 
   const handleClearAllData = async () => {
     if (!clearDataConfirm) {
@@ -20,21 +24,29 @@ export default function Settings() {
       return;
     }
 
+    setClearDataConfirm(false);
+    setIsClearing(true);
+
     try {
       // Clear IndexedDB data
       const dbName = 'timeweave-db';
-      const deleteReq = indexedDB.deleteDatabase(dbName);
+      indexedDB.deleteDatabase(dbName);
       
-      deleteReq.onsuccess = () => {
-        alert('All data cleared successfully. Please refresh the page.');
+      // Clear all React Query cache
+      queryClient.clear();
+      
+      // Reset states
+      setIsClearing(false);
+      setClearSuccess(true);
+      
+      // Show success message for 2 seconds then reload
+      setTimeout(() => {
         window.location.reload();
-      };
-      
-      deleteReq.onerror = () => {
-        alert('Error clearing data. Please try again.');
-      };
+      }, 2000);
     } catch (error) {
       console.error('Error clearing data:', error);
+      setIsClearing(false);
+      setClearDataConfirm(false);
       alert('Error clearing data. Please try again.');
     }
   };
@@ -136,7 +148,7 @@ export default function Settings() {
                 This will permanently delete all your tasks, schedules, and settings.
               </p>
               
-              {clearDataConfirm && (
+              {clearDataConfirm && !clearSuccess && (
                 <Alert variant="destructive">
                   <AlertDescription>
                     Are you sure? This action cannot be undone. Click the button again to confirm.
@@ -144,12 +156,33 @@ export default function Settings() {
                 </Alert>
               )}
               
+              {clearSuccess && (
+                <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    All data cleared successfully! Refreshing...
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <Button 
-                variant={clearDataConfirm ? "destructive" : "outline"}
+                variant={(clearDataConfirm || isClearing) ? "destructive" : "outline"}
                 onClick={handleClearAllData}
                 className="w-full"
+                disabled={isClearing}
               >
-                {clearDataConfirm ? "Confirm: Clear All Data" : "Clear All Data"}
+                {isClearing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Clearing data...
+                  </>
+                ) : clearSuccess ? (
+                  "Clear All Data"
+                ) : clearDataConfirm ? (
+                  "Confirm: Clear All Data"
+                ) : (
+                  "Clear All Data"
+                )}
               </Button>
             </div>
           </CardContent>
