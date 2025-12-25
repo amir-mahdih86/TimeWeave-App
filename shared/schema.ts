@@ -10,7 +10,7 @@ export const tasks = pgTable("tasks", {
   id: text("id").primaryKey(), // UUID generated client-side
   title: text("title").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // 'fixed' | 'one-time'
+  type: text("type").notNull(), // 'fixed' | 'one-time' | 'materialized'
   
   // Time stored as HH:mm (24h format) for simplicity in time slot calculations
   startTime: text("start_time").notNull(), 
@@ -18,11 +18,14 @@ export const tasks = pgTable("tasks", {
   
   color: text("color").default("hsl(var(--primary))"),
   
-  // For fixed tasks: [0, 1, 2, 3, 4, 5, 6] where 0=Sunday
+  // For fixed tasks (templates): [0, 1, 2, 3, 4, 5, 6] where 0=Sunday
   daysOfWeek: integer("days_of_week").array(), 
   
-  // For one-time tasks: YYYY-MM-DD
+  // For one-time and materialized tasks: YYYY-MM-DD
   date: text("date"), 
+  
+  // For materialized tasks: reference to the template task
+  templateId: text("template_id"),
   
   createdAt: timestamp("created_at").defaultNow(),
 });

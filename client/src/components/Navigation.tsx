@@ -1,14 +1,15 @@
 import { Link, useLocation } from "wouter";
-import { Calendar, LayoutDashboard, PieChart } from "lucide-react";
+import { Calendar, LayoutDashboard, PieChart, Settings } from "lucide-react";
 import { clsx } from "clsx";
 
 export function Navigation() {
   const [location] = useLocation();
 
   const links = [
-    { href: "/", label: "Today", icon: Calendar },
-    { href: "/weekly", label: "Week", icon: LayoutDashboard },
+    { href: "/", label: "Daily Plans", icon: Calendar },
+    { href: "/weekly", label: "Fixed Tasks", icon: LayoutDashboard },
     { href: "/reports", label: "Reports", icon: PieChart },
+    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   return (

@@ -1,7 +1,9 @@
 import { Task, Completion } from "@shared/schema";
-import { Clock, CheckCircle2, Circle } from "lucide-react";
+import { Clock, CheckCircle2, Circle, Calendar } from "lucide-react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
+import { useSettings } from "@/hooks/use-settings";
+import { formatTime } from "@/lib/settings";
 
 interface TaskCardProps {
   task: Task;
@@ -11,7 +13,13 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
+  const { settings } = useSettings();
   const duration = calculateDuration(task.startTime, task.endTime);
+
+  // Hide completed tasks if setting is disabled
+  if (isDone && !settings.showCompletedTasks) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -40,12 +48,18 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
               "text-xs font-bold px-2 py-0.5 rounded-full",
               isDone ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
             )}>
-              {task.startTime} - {task.endTime}
+              {formatTime(task.startTime, settings.timeFormat)} - {formatTime(task.endTime, settings.timeFormat)}
             </span>
             <span className="text-xs text-muted-foreground flex items-center gap-1">
               <Clock className="w-3 h-3" />
               {duration}m
             </span>
+            {(task.type === 'fixed' || task.type === 'materialized') && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                Fixed
+              </span>
+            )}
           </div>
           
           <h3 className={clsx(

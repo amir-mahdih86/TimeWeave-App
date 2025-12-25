@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Weekly from "@/pages/Weekly";
 import Reports from "@/pages/Reports";
+import Settings from "@/pages/Settings";
 
 // Add safe area padding for mobile PWA
 function Layout({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/weekly" component={Weekly} />
       <Route path="/reports" component={Reports} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );

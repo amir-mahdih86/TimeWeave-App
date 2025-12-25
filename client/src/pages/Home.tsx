@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { format, addDays, subDays, parseISO, isSameDay } from "date-fns";
-import { useTasks, useExceptions, useCompletions, useToggleCompletion } from "@/hooks/use-tasks";
+import { format, addDays, subDays, isSameDay } from "date-fns";
+import { useTasks, useExceptions, useCompletions, useToggleCompletion, useTasksForDate } from "@/hooks/use-tasks";
 import { TaskCard } from "@/components/TaskCard";
 import { FreeTimeSlot } from "@/components/FreeTimeSlot";
-import { TaskModal } from "@/components/TaskModal";
+import { OneTimeTaskModal } from "@/components/OneTimeTaskModal";
+import { FixedTaskEditModal } from "@/components/FixedTaskEditModal";
 import { Navigation } from "@/components/Navigation";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Home as HomeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,50 +16,21 @@ export default function Home() {
   const dateStr = format(selectedDate, 'yyyy-MM-dd');
   const dayOfWeek = selectedDate.getDay(); // 0 = Sunday
 
-  const { data: tasks, isLoading: isLoadingTasks } = useTasks();
-  const { data: exceptions } = useExceptions();
+  const { data: tasksForDate, isLoading: isLoadingTasks } = useTasksForDate(dateStr);
   const { data: completions } = useCompletions(dateStr);
   const toggleCompletion = useToggleCompletion();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFixedTaskEditModalOpen, setIsFixedTaskEditModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
   const [newSlotTime, setNewSlotTime] = useState<{start: string, end: string} | undefined>(undefined);
+  const [isFromFreeTimeSlot, setIsFromFreeTimeSlot] = useState(false);
+
+  const isToday = isSameDay(selectedDate, new Date());
 
   // === LOGIC: Build the Daily Schedule ===
-  // 1. Filter tasks valid for this day
-  const validTasks = tasks?.filter(task => {
-    // Check if task is fixed and runs on this day of week
-    if (task.type === 'fixed') {
-      return task.daysOfWeek?.includes(dayOfWeek);
-    }
-    // Check if task is one-time and matches date
-    if (task.type === 'one-time') {
-      return task.date === dateStr;
-    }
-    return false;
-  }).map(task => {
-    // Check for exceptions
-    const exception = exceptions?.find(e => 
-      e.taskId === task.id && e.date === dateStr
-    );
-    
-    // If cancelled, return null (filter out later)
-    if (exception?.type === 'cancelled') return null;
-
-    // Apply modifications if any
-    if (exception?.type === 'modified') {
-      return {
-        ...task,
-        startTime: exception.newStartTime || task.startTime,
-        endTime: exception.newEndTime || task.endTime,
-        description: exception.newDescription || task.description,
-      };
-    }
-    return task;
-  }).filter(Boolean) as Task[] || [];
-
-  // 2. Sort tasks by start time
-  const sortedTasks = validTasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  // Tasks are already materialized for this date, so we just need to sort them
+  const sortedTasks = tasksForDate?.sort((a, b) => a.startTime.localeCompare(b.startTime)) || [];
 
   // 3. Compute Free Time Slots
   const timeSlots: Array<{ type: 'task', data: Task } | { type: 'free', start: string, end: string }> = [];
@@ -89,13 +61,24 @@ export default function Home() {
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setNewSlotTime(undefined);
-    setIsModalOpen(true);
+    setIsFromFreeTimeSlot(false);
+    
+    if (task.type === 'fixed') {
+      setIsFixedTaskEditModalOpen(true);
+    } else {
+      setIsModalOpen(true);
+    }
   };
 
   const handleCreateTask = (start?: string, end?: string) => {
     setEditingTask(undefined);
     setNewSlotTime(start && end ? { start, end } : undefined);
+    setIsFromFreeTimeSlot(Boolean(start && end)); // True if called from free time slot
     setIsModalOpen(true);
+  };
+
+  const goToToday = () => {
+    setSelectedDate(new Date());
   };
 
   if (isLoadingTasks) {
@@ -113,18 +96,30 @@ export default function Home() {
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">My Day</h1>
+              <h1 className="text-2xl font-bold text-foreground">TimeWeave</h1>
               <p className="text-sm text-muted-foreground">
                 {format(selectedDate, "MMMM yyyy")}
               </p>
             </div>
-            <Button 
-              size="icon" 
-              className="rounded-full shadow-lg shadow-primary/25"
-              onClick={() => handleCreateTask()}
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
+            <div className="flex gap-2">
+              {!isToday && (
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={goToToday}
+                >
+                  <HomeIcon className="w-5 h-5" />
+                </Button>
+              )}
+              <Button 
+                size="icon" 
+                className="rounded-full shadow-lg shadow-primary/25"
+                onClick={() => handleCreateTask()}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
           
           {/* Date Scroller */}
@@ -138,7 +133,7 @@ export default function Home() {
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="font-semibold text-sm">
-              {isSameDay(selectedDate, new Date()) ? "Today, " : ""}
+              {isToday ? "Today, " : ""}
               {format(selectedDate, "EEE d")}
             </span>
             <Button 
@@ -158,7 +153,7 @@ export default function Home() {
         {timeSlots.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p>No tasks scheduled.</p>
-            <Button variant="link" onClick={() => handleCreateTask()}>Add a task</Button>
+            <Button variant="ghost" onClick={() => handleCreateTask()}>Add a task</Button>
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
@@ -191,14 +186,24 @@ export default function Home() {
         )}
       </main>
 
-      <TaskModal 
+      <OneTimeTaskModal 
         open={isModalOpen} 
         onOpenChange={setIsModalOpen}
         initialData={editingTask}
         defaultDate={dateStr}
         defaultStartTime={newSlotTime?.start}
         defaultEndTime={newSlotTime?.end}
+        showDateField={!isFromFreeTimeSlot} // Hide date field for free time slots
       />
+
+      {editingTask && editingTask.type === 'fixed' && (
+        <FixedTaskEditModal
+          open={isFixedTaskEditModalOpen}
+          onOpenChange={setIsFixedTaskEditModalOpen}
+          task={editingTask}
+          currentDate={dateStr}
+        />
+      )}
       
       <Navigation />
     </div>
