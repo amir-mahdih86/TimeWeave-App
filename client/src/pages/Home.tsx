@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { format, addDays, subDays, isSameDay } from "date-fns";
-import { useTasks, useExceptions, useCompletions, useToggleCompletion, useTasksForDate } from "@/hooks/use-tasks";
+import { useTasks, useExceptions, useCompletions, useToggleCompletion, useTasksForDate, useRestoreTask, useCanceledTasksForDate } from "@/hooks/use-tasks";
 import { TaskCard } from "@/components/TaskCard";
 import { FreeTimeSlot } from "@/components/FreeTimeSlot";
 import { OneTimeTaskModal } from "@/components/OneTimeTaskModal";
 import { FixedTaskEditModal } from "@/components/FixedTaskEditModal";
+import { CanceledTasksModal } from "@/components/CanceledTasksModal";
 import { Navigation } from "@/components/Navigation";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Home as HomeIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Home as HomeIcon, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,10 +19,13 @@ export default function Home() {
 
   const { data: tasksForDate, isLoading: isLoadingTasks } = useTasksForDate(dateStr);
   const { data: completions } = useCompletions(dateStr);
+  const { data: canceledTasks } = useCanceledTasksForDate(dateStr);
   const toggleCompletion = useToggleCompletion();
+  const restoreTask = useRestoreTask();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isFixedTaskEditModalOpen, setIsFixedTaskEditModalOpen] = useState(false);
+  const [isCanceledTasksModalOpen, setIsCanceledTasksModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
   const [newSlotTime, setNewSlotTime] = useState<{start: string, end: string} | undefined>(undefined);
   const [isFromFreeTimeSlot, setIsFromFreeTimeSlot] = useState(false);
@@ -66,6 +70,7 @@ export default function Home() {
     if (task.type === 'fixed') {
       setIsFixedTaskEditModalOpen(true);
     } else {
+      // For both one-time and materialized tasks, use the OneTimeTaskModal
       setIsModalOpen(true);
     }
   };
@@ -79,6 +84,10 @@ export default function Home() {
 
   const goToToday = () => {
     setSelectedDate(new Date());
+  };
+
+  const handleRestoreTask = (task: Task) => {
+    restoreTask.mutate(task.id);
   };
 
   if (isLoadingTasks) {
@@ -150,6 +159,22 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-md mx-auto px-4 py-6 space-y-4">
+        {/* Canceled Tasks Button */}
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setIsCanceledTasksModalOpen(true)}
+            className="text-muted-foreground hover:text-foreground relative"
+          >
+            <Archive className="w-4 h-4 mr-2" />
+            Canceled Tasks
+            <span className="ml-2 bg-muted text-muted-foreground text-xs font-medium px-1.5 py-0.5 rounded-full min-w-[1.25rem] h-5 flex items-center justify-center">
+              {canceledTasks?.length || 0}
+            </span>
+          </Button>
+        </div>
+
         {timeSlots.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
             <p>No tasks scheduled.</p>
@@ -204,6 +229,13 @@ export default function Home() {
           currentDate={dateStr}
         />
       )}
+
+      <CanceledTasksModal
+        open={isCanceledTasksModalOpen}
+        onOpenChange={setIsCanceledTasksModalOpen}
+        date={dateStr}
+        onRestoreTask={handleRestoreTask}
+      />
       
       <Navigation />
     </div>
