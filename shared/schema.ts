@@ -27,6 +27,9 @@ export const tasks = pgTable("tasks", {
   // For materialized tasks: reference to the template task
   templateId: text("template_id"),
   
+  // For materialized tasks: mark as canceled instead of deleting
+  canceled: boolean("canceled").default(false),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
