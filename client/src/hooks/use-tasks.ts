@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { 
   getAllTasks, 
   addTask, 
@@ -9,6 +10,8 @@ import {
   updateFixedTaskTemplate,
   deleteFixedTaskTemplate,
   getTasksForDate,
+  getCanceledTasksForDate,
+  restoreTask,
   getTasksForDateRange,
   getAllExceptions, 
   addException,
@@ -16,15 +19,13 @@ import {
   getAllCompletions,
   toggleCompletion,
   initDB,
-  seedInitialData,
-  initializeTodaysTasks
+  seedInitialData
 } from "@/lib/storage";
 import { InsertTask, InsertException } from "@shared/schema";
 
 // Initialize DB and seed data
 initDB().then(() => {
   seedInitialData();
-  initializeTodaysTasks(); // Materialize today's tasks on app start
 });
 
 export function useTasks() {
@@ -35,9 +36,28 @@ export function useTasks() {
 }
 
 export function useTasksForDate(date: string) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ['tasks', date],
-    queryFn: () => getTasksForDate(date),
+    queryFn: async () => {
+      const tasks = await getTasksForDate(date);
+      // If this is today and we potentially materialized tasks, invalidate range queries
+      const today = format(new Date(), 'yyyy-MM-dd');
+      if (date === today) {
+        // Small delay to ensure this query completes first
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['tasks', 'range'] });
+        }, 0);
+      }
+      return tasks;
+    },
+  });
+}
+
+export function useCanceledTasksForDate(date: string) {
+  return useQuery({
+    queryKey: ['canceled-tasks', date],
+    queryFn: () => getCanceledTasksForDate(date),
   });
 }
 
@@ -75,6 +95,8 @@ export function useCreateTask() {
     mutationFn: (data: InsertTask) => addTask(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      // Also invalidate date range queries for reports
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'range'] });
     },
   });
 }
@@ -106,6 +128,7 @@ export function useDeleteTask() {
     mutationFn: (id: string) => deleteTask(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
     },
   });
 }
@@ -116,6 +139,7 @@ export function useDeleteFixedTaskTemplate() {
     mutationFn: (id: string) => deleteFixedTaskTemplate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
     },
   });
 }
@@ -161,6 +185,17 @@ export function useToggleCompletion() {
       toggleCompletion(taskId, date, isDone),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['completions'] });
+    },
+  });
+}
+
+export function useRestoreTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => restoreTask(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
     },
   });
 }
