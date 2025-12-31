@@ -16,6 +16,21 @@ export function minutesToTime(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
+export function isTaskCurrentlyActive(task: { startTime: string; endTime: string; date?: string | null }): boolean {
+  // Only check for current activity if it's today
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  if (task.date && task.date !== today) {
+    return false;
+  }
+  
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = timeToMinutes(task.startTime);
+  const endMinutes = timeToMinutes(task.endTime);
+  
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+}
+
 export function isValidTimeRange(startTime: string, endTime: string): boolean {
   return timeToMinutes(startTime) < timeToMinutes(endTime);
 }
@@ -39,12 +54,15 @@ export function findOverlappingTasks(
   return existingTasks.filter(task => {
     // Skip the task being edited
     if (excludeTaskId && task.id === excludeTaskId) return false;
+    
+    // Skip canceled tasks
+    if (task.canceled) return false;
 
     // Check if task applies to the same day
     let taskApplies = false;
     if (task.type === 'fixed' && dayOfWeek !== undefined) {
       taskApplies = task.daysOfWeek?.includes(dayOfWeek) || false;
-    } else if (task.type === 'one-time' && date) {
+    } else if ((task.type === 'one-time' || task.type === 'materialized') && date) {
       taskApplies = task.date === date;
     }
 
