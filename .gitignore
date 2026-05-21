@@ -3,3 +3,7 @@ dist
 .DS_Store
 vite.config.ts.*
 *.tar.gz
+
+# IDEs and editors
+.vscode/
+.idea/
