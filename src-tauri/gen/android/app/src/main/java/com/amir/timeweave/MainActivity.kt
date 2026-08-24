@@ -1,11 +1,11 @@
 package com.amir.timeweave
 
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 
 class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    // Edge-to-edge intentionally disabled: keep app content below the status
+    // bar so system icons never overlap the UI.
     super.onCreate(savedInstanceState)
   }
 }

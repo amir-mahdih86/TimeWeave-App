@@ -21,28 +21,14 @@ export function Navigation() {
             <Link key={href} href={href}>
               <div
                 className={clsx(
-                  "relative flex flex-col items-center justify-center w-16 h-full transition-all duration-200 cursor-pointer",
-                  isActive
-                    ? "text-primary"
+                  "flex flex-col items-center justify-center space-y-1 w-16 h-full transition-all duration-200 cursor-pointer",
+                  isActive 
+                    ? "text-primary scale-105" 
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <span
-                  className={clsx(
-                    "absolute top-1.5 h-8 w-12 rounded-full transition-all duration-300",
-                    isActive ? "bg-primary/10 scale-100" : "scale-75 opacity-0"
-                  )}
-                />
-                <Icon
-                  className={clsx("w-5 h-5 relative", isActive && "fill-primary/15")}
-                  strokeWidth={isActive ? 2.4 : 2}
-                />
-                <span className={clsx(
-                  "text-[10px] relative",
-                  isActive ? "font-semibold" : "font-medium"
-                )}>
-                  {label}
-                </span>
+                <Icon className={clsx("w-6 h-6", isActive && "fill-current/20")} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">{label}</span>
               </div>
             </Link>
           );

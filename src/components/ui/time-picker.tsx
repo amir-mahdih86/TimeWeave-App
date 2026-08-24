@@ -35,7 +35,9 @@ function parseHHmm(value: string): { h: number; m: number } | null {
   return { h, m: min };
 }
 
-// Vertical snap-list that reports the centered item.
+// Vertical snap-list that reports the centered item. The list is rendered
+// three times back-to-back so it loops endlessly; after settling near an
+// edge copy we silently re-center on the middle one.
 function Wheel<T extends number | string>({
   items,
   index,
@@ -47,38 +49,47 @@ function Wheel<T extends number | string>({
   onIndexChange: (index: number) => void;
   render: (item: T, selected: boolean) => React.ReactNode;
 }) {
+  const len = items.length;
   const ref = useRef<HTMLDivElement>(null);
   const programmaticUntil = useRef(0);
   const debounce = useRef<number | undefined>(undefined);
+  // Absolute position within the tripled list; kept in the middle copy.
+  const absRef = useRef(len + index);
 
-  const scrollTo = (i: number, smooth = true) => {
+  const scrollToAbs = (abs: number, smooth = true) => {
     const el = ref.current;
     if (!el) return;
-    el.scrollTo({
-      top: i * ITEM_H,
-      behavior: smooth ? "smooth" : "auto",
-    });
+    el.scrollTo({ top: abs * ITEM_H, behavior: smooth ? "smooth" : "auto" });
   };
 
   useEffect(() => {
-    // Center without animation whenever the external selection changes.
-    scrollTo(index, false);
+    scrollToAbs(absRef.current, false);
     programmaticUntil.current = Date.now() + 80;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length]);
+  }, [len]);
+
+  const settle = () => {
+    const el = ref.current;
+    if (!el) return;
+    let abs = Math.round(el.scrollTop / ITEM_H);
+    const wrapped = ((abs % len) + len) % len;
+
+    if (wrapped !== index) onIndexChange(wrapped);
+
+    // Re-center into the middle copy without animation.
+    if (abs < len || abs >= 2 * len) {
+      abs = len + wrapped;
+      scrollToAbs(abs, false);
+      programmaticUntil.current = Date.now() + 120;
+    }
+  };
 
   const handleScroll = () => {
     const el = ref.current;
     if (!el) return;
     if (Date.now() < programmaticUntil.current) return;
     window.clearTimeout(debounce.current);
-    debounce.current = window.setTimeout(() => {
-      const center = Math.round(el.scrollTop / ITEM_H);
-      const clamped = Math.max(0, Math.min(items.length - 1, center));
-      if (clamped !== index) onIndexChange(clamped);
-      scrollTo(clamped);
-      programmaticUntil.current = Date.now() + 120;
-    }, 140);
+    debounce.current = window.setTimeout(settle, 140);
   };
 
   return (
@@ -91,24 +102,31 @@ function Wheel<T extends number | string>({
       <div
         ref={ref}
         onScroll={handleScroll}
-        className="no-scrollbar snap-y snap-mandatory overflow-y-auto"
+        className="no-scrollbar snap-y snap-mandatory overflow-y-auto overscroll-contain"
         style={{ height: ITEM_H * VISIBLE_ITEMS }}
       >
         <div style={{ height: ((VISIBLE_ITEMS - 1) / 2) * ITEM_H }} />
-        {items.map((item, i) => (
-          <div
-            key={`${item}`}
-            className="snap-center flex items-center justify-center cursor-pointer select-none"
-            style={{ height: ITEM_H }}
-            onClick={() => {
-              onIndexChange(i);
-              scrollTo(i);
-              programmaticUntil.current = Date.now() + 200;
-            }}
-          >
-            {render(item, i === index)}
-          </div>
-        ))}
+        {[0, 1, 2].map(copy =>
+          items.map((item, i) => {
+            const abs = copy * len + i;
+            return (
+              <div
+                key={`${copy}-${item}`}
+                className="snap-center flex items-center justify-center cursor-pointer select-none"
+                style={{ height: ITEM_H }}
+                onClick={() => {
+                  // Always land on the middle copy so the list stays centered.
+                  absRef.current = len + i;
+                  onIndexChange(i);
+                  scrollToAbs(absRef.current);
+                  programmaticUntil.current = Date.now() + 350;
+                }}
+              >
+                {render(item, i === index)}
+              </div>
+            );
+          })
+        )}
         <div style={{ height: ((VISIBLE_ITEMS - 1) / 2) * ITEM_H }} />
       </div>
     </div>
