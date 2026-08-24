@@ -14,6 +14,12 @@ rust-version = "1.77.2"
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Debug Android builds embed huge DWARF sections into libapp_lib.so (~120MB);
+# stripping them keeps debug APKs small enough for on-device installs while
+# still compiling with debug assertions and no optimizations.
+[profile.dev]
+strip = "debuginfo"
+
 [build-dependencies]
 tauri-build = { version = "2.5.6", features = [] }
 

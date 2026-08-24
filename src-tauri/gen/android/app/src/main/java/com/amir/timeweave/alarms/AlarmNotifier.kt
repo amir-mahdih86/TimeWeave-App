@@ -43,7 +43,14 @@ object AlarmNotifier {
     manager.createNotificationChannel(reminderChannel)
   }
 
-  fun postAlarm(context: Context, id: String, title: String, body: String) {
+  fun postAlarm(
+    context: Context,
+    id: String,
+    title: String,
+    body: String,
+    onlyWhenLocked: Boolean,
+    snoozeMinutes: Int
+  ) {
     createChannels(context)
 
     val fullScreenIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -52,6 +59,8 @@ object AlarmNotifier {
       putExtra(AlarmActivity.EXTRA_TITLE, title)
       putExtra(AlarmActivity.EXTRA_BODY, body)
       putExtra(AlarmActivity.EXTRA_FULL_ALARM, true)
+      putExtra(AlarmActivity.EXTRA_ONLY_WHEN_LOCKED, onlyWhenLocked)
+      putExtra(AlarmActivity.EXTRA_SNOOZE_MINUTES, snoozeMinutes)
     }
     val fullScreenPendingIntent = PendingIntent.getActivity(
       context,

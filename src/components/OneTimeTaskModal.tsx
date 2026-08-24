@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema, InsertTask } from "@/lib/schema";
+import { insertTaskSchema, InsertTask, ReminderMode } from "@/lib/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateTask, useUpdateTask, useDeleteTask, useTasks } from "@/hooks/use-tasks";
 import { useEffect, useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
@@ -48,6 +49,7 @@ export function OneTimeTaskModal({
   const deleteTask = useDeleteTask();
   const { data: tasks } = useTasks();
   const [validationResult, setValidationResult] = useState<{ isValid: boolean; errors: string[]; warnings: string[] }>({ isValid: true, errors: [], warnings: [] });
+  const [reminder, setReminder] = useState<ReminderMode>('inherit');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,6 +67,7 @@ export function OneTimeTaskModal({
   useEffect(() => {
     if (open) {
       if (initialData) {
+        setReminder(initialData.reminder ?? 'inherit');
         form.reset({
           title: initialData.title,
           description: initialData.description || "",
@@ -75,6 +78,7 @@ export function OneTimeTaskModal({
           date: initialData.date || new Date().toISOString().split('T')[0],
         });
       } else {
+        setReminder('inherit');
         form.reset({
           title: "",
           description: "",
@@ -118,6 +122,7 @@ export function OneTimeTaskModal({
       const taskData: Omit<InsertTask, 'id' | 'createdAt'> = {
         ...data,
         type: "one-time" as const,
+        reminder,
       };
       
       if (initialData?.id) {
@@ -180,6 +185,21 @@ export function OneTimeTaskModal({
               <Input type="date" id="date" {...form.register("date")} />
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="reminder">Reminder</Label>
+            <Select value={reminder} onValueChange={(v: ReminderMode) => setReminder(v)}>
+              <SelectTrigger id="reminder">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Default (follow app settings)</SelectItem>
+                <SelectItem value="none">Off — no reminder</SelectItem>
+                <SelectItem value="notification">Notification only</SelectItem>
+                <SelectItem value="alarm">Full-screen alarm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Validation Messages */}
           {validationResult.errors.length > 0 && (

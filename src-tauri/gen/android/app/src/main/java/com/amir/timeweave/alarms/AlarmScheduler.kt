@@ -45,15 +45,6 @@ object AlarmScheduler {
     AlarmStore.remove(context, id)
   }
 
-  fun snooze(context: Context, id: String, minutes: Int): Boolean {
-    val item = AlarmStore.all(context).firstOrNull { it.id == id } ?: return false
-    schedule(
-      context,
-      item.copy(fireAt = System.currentTimeMillis() + minutes * 60_000L)
-    )
-    return true
-  }
-
   fun rescheduleAll(context: Context) {
     val now = System.currentTimeMillis()
     AlarmStore.all(context).forEach { item ->

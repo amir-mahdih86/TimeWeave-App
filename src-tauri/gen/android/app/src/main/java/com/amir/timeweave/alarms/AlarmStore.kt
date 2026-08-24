@@ -9,7 +9,9 @@ data class AlarmItem(
   val title: String,
   val body: String,
   val fireAt: Long,
-  val fullAlarm: Boolean
+  val fullAlarm: Boolean,
+  val onlyWhenLocked: Boolean = true,
+  val snoozeMinutes: Int = 5
 )
 
 object AlarmStore {
@@ -27,7 +29,9 @@ object AlarmStore {
           title = o.optString("title", ""),
           body = o.optString("body", ""),
           fireAt = o.getLong("fireAt"),
-          fullAlarm = o.optBoolean("fullAlarm", false)
+          fullAlarm = o.optBoolean("fullAlarm", false),
+          onlyWhenLocked = o.optBoolean("onlyWhenLocked", true),
+          snoozeMinutes = o.optInt("snoozeMinutes", 5)
         )
       }
     } catch (_: Exception) {
@@ -56,6 +60,8 @@ object AlarmStore {
           put("body", item.body)
           put("fireAt", item.fireAt)
           put("fullAlarm", item.fullAlarm)
+          put("onlyWhenLocked", item.onlyWhenLocked)
+          put("snoozeMinutes", item.snoozeMinutes)
         }
       )
     }

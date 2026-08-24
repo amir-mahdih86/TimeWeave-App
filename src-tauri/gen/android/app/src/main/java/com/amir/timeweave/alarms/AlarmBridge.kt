@@ -28,9 +28,14 @@ object AlarmBridge {
     title: String,
     body: String,
     fireAt: Long,
-    fullAlarm: Boolean
+    fullAlarm: Boolean,
+    onlyWhenLocked: Boolean,
+    snoozeMinutes: Int
   ) {
-    AlarmScheduler.schedule(context, AlarmItem(id, title, body, fireAt, fullAlarm))
+    AlarmScheduler.schedule(
+      context,
+      AlarmItem(id, title, body, fireAt, fullAlarm, onlyWhenLocked, snoozeMinutes)
+    )
   }
 
   @JvmStatic

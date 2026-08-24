@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertTaskSchema, InsertTask } from "@/lib/schema";
+import { insertTaskSchema, InsertTask, ReminderMode } from "@/lib/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCreateTask, useUpdateTask, useDeleteTask, useUpdateFixedTaskForFuture, useDeleteFixedTaskForFuture, useUpdateFixedTaskTemplate, useDeleteFixedTaskTemplate, useTasks } from "@/hooks/use-tasks";
 import { useEffect, useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
@@ -51,6 +52,7 @@ export function FixedTaskModal({
   const deleteFixedTaskTemplate = useDeleteFixedTaskTemplate();
   const { data: tasks } = useTasks();
   const [validationResult, setValidationResult] = useState<{ isValid: boolean; errors: string[]; warnings: string[] }>({ isValid: true, errors: [], warnings: [] });
+  const [reminder, setReminder] = useState<ReminderMode>('inherit');
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,6 +70,7 @@ export function FixedTaskModal({
   useEffect(() => {
     if (open) {
       if (initialData) {
+        setReminder(initialData.reminder ?? 'inherit');
         form.reset({
           title: initialData.title,
           description: initialData.description || "",
@@ -78,6 +81,7 @@ export function FixedTaskModal({
           daysOfWeek: initialData.daysOfWeek || [1, 2, 3, 4, 5],
         });
       } else {
+        setReminder('inherit');
         form.reset({
           title: "",
           description: "",
@@ -121,6 +125,7 @@ export function FixedTaskModal({
       const taskData: Omit<InsertTask, 'id' | 'createdAt'> = {
         ...data,
         type: "fixed" as const,
+        reminder,
       };
       
       if (initialData?.id) {
@@ -189,6 +194,21 @@ export function FixedTaskModal({
               <Label htmlFor="endTime">End Time</Label>
               <Input type="time" id="endTime" {...form.register("endTime")} />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reminder">Reminder</Label>
+            <Select value={reminder} onValueChange={(v: ReminderMode) => setReminder(v)}>
+              <SelectTrigger id="reminder">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="inherit">Default (follow app settings)</SelectItem>
+                <SelectItem value="none">Off — no reminder</SelectItem>
+                <SelectItem value="notification">Notification only</SelectItem>
+                <SelectItem value="alarm">Full-screen alarm</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Validation Messages */}

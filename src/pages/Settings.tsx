@@ -231,7 +231,7 @@ export default function Settings() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="alarmStyle">Reminder style</Label>
+              <Label htmlFor="alarmStyle">Default reminder style</Label>
               <Select
                 value={settings.alarmStyle}
                 onValueChange={(value: 'notification' | 'alarm') => {
@@ -245,15 +245,60 @@ export default function Settings() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="notification">Heads-up notification</SelectItem>
-                  <SelectItem value="alarm">Full-screen alarm (works on lock screen)</SelectItem>
+                  <SelectItem value="alarm">Full-screen alarm</SelectItem>
                 </SelectContent>
               </Select>
-              {settings.alarmStyle === 'alarm' && (
-                <p className="text-xs text-muted-foreground">
-                  The alarm turns the screen on, rings and vibrates until dismissed.
-                </p>
-              )}
             </div>
+
+            {settings.alarmStyle === 'alarm' && (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="alarmOnlyWhenLocked">Alarm only when screen is off</Label>
+                    <p className="text-xs text-muted-foreground">
+                      While you are using the phone, show a regular notification instead of
+                      taking over the screen
+                    </p>
+                  </div>
+                  <Switch
+                    id="alarmOnlyWhenLocked"
+                    checked={settings.alarmOnlyWhenLocked}
+                    onCheckedChange={(checked) => {
+                      updateSettings({ alarmOnlyWhenLocked: checked });
+                      void syncTaskAlarms();
+                    }}
+                    disabled={!settings.notificationsEnabled}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="snoozeMinutes">Snooze duration</Label>
+                  <Select
+                    value={String(settings.snoozeMinutes)}
+                    onValueChange={(value: string) => {
+                      updateSettings({ snoozeMinutes: Number(value) });
+                      void syncTaskAlarms();
+                    }}
+                    disabled={!settings.notificationsEnabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 minutes</SelectItem>
+                      <SelectItem value="10">10 minutes</SelectItem>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+            {settings.alarmStyle === 'alarm' && (
+              <p className="text-xs text-muted-foreground">
+                The alarm turns the screen on, rings and vibrates until dismissed.
+                Tasks can override this behavior with their own Reminder option.
+              </p>
+            )}
 
             {isNative() && (
               <div className="space-y-2 pt-2 border-t border-border">

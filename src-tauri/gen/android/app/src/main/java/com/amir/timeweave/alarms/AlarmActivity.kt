@@ -28,6 +28,8 @@ class AlarmActivity : Activity() {
     const val EXTRA_TITLE = "timeweave_alarm_title"
     const val EXTRA_BODY = "timeweave_alarm_body"
     const val EXTRA_FULL_ALARM = "timeweave_alarm_full"
+    const val EXTRA_ONLY_WHEN_LOCKED = "timeweave_alarm_only_locked"
+    const val EXTRA_SNOOZE_MINUTES = "timeweave_alarm_snooze_min"
   }
 
   private var mediaPlayer: MediaPlayer? = null
@@ -40,6 +42,14 @@ class AlarmActivity : Activity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    // If alarms should only interrupt while the screen is off/locked, degrade
+    // to the (already posted) heads-up notification when the device is in use.
+    val onlyWhenLocked = intent.getBooleanExtra(EXTRA_ONLY_WHEN_LOCKED, true)
+    if (onlyWhenLocked && isScreenOn()) {
+      finishAndRemoveTask()
+      return
+    }
 
     window.addFlags(
       WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
@@ -66,6 +76,11 @@ class AlarmActivity : Activity() {
     setIntent(intent)
     refreshTexts()
     if (mediaPlayer?.isPlaying != true) startRinging()
+  }
+
+  private fun isScreenOn(): Boolean {
+    val pm = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager ?: return false
+    return pm.isInteractive
   }
 
   private fun buildUi() {
@@ -125,13 +140,14 @@ class AlarmActivity : Activity() {
       gravity = Gravity.CENTER
     }
 
+    val snoozeMinutes = intent.getIntExtra(EXTRA_SNOOZE_MINUTES, 5)
     val snoozeButton = Button(this).apply {
-      text = "Snooze 5 min"
+      text = "Snooze $snoozeMinutes min"
       textSize = 16f
       setTextColor(0xFFE5E1F5.toInt())
       background = roundRect(0x22FFFFFF, 0x33FFFFFF, dp(28))
       setPadding(dp(28), dp(6), dp(28), dp(6))
-      setOnClickListener { onSnooze() }
+      setOnClickListener { onSnooze(snoozeMinutes) }
     }
     buttonsRow.addView(
       snoozeButton,
@@ -230,19 +246,21 @@ class AlarmActivity : Activity() {
     finishAndRemoveTask()
   }
 
-  private fun onSnooze() {
+  private fun onSnooze(minutes: Int) {
     val id = currentId()
     if (id.isNotBlank()) {
       // The store entry was removed when the alarm fired, so rebuild the
-      // item from the intent extras and reschedule it 5 minutes out.
+      // item from the intent extras and reschedule it.
       AlarmScheduler.schedule(
         applicationContext,
         AlarmItem(
           id = id,
           title = intent.getStringExtra(EXTRA_TITLE) ?: "",
           body = intent.getStringExtra(EXTRA_BODY) ?: "",
-          fireAt = System.currentTimeMillis() + 5 * 60_000L,
-          fullAlarm = intent.getBooleanExtra(EXTRA_FULL_ALARM, true)
+          fireAt = System.currentTimeMillis() + minutes * 60_000L,
+          fullAlarm = true,
+          onlyWhenLocked = intent.getBooleanExtra(EXTRA_ONLY_WHEN_LOCKED, true),
+          snoozeMinutes = minutes
         )
       )
     }

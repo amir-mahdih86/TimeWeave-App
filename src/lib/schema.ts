@@ -52,13 +52,18 @@ export const completions = pgTable("completions", {
   isDone: boolean("is_done").notNull().default(false),
 });
 
+// Reminder behavior for a single task. 'inherit' follows the global settings.
+export type ReminderMode = "inherit" | "none" | "notification" | "alarm";
+
 // Zod Schemas
-export const insertTaskSchema = createInsertSchema(tasks);
+export const insertTaskSchema = createInsertSchema(tasks).extend({
+  reminder: z.enum(["inherit", "none", "notification", "alarm"]).optional(),
+});
 export const insertExceptionSchema = createInsertSchema(exceptions);
 export const insertCompletionSchema = createInsertSchema(completions);
 
 // Types
-export type Task = typeof tasks.$inferSelect;
+export type Task = typeof tasks.$inferSelect & { reminder?: ReminderMode };
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 
 export type Exception = typeof exceptions.$inferSelect;

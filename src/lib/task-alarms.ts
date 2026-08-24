@@ -1,4 +1,4 @@
-import { getSettings } from "@/lib/settings";
+import { getSettings, type AppSettings } from "@/lib/settings";
 import { isNative, safeInvoke } from "@/lib/native";
 import { getTasksForDate } from "@/lib/storage";
 import { Task } from "@/lib/schema";
@@ -27,11 +27,40 @@ function alarmBody(task: Task): string {
 // Resolve the effective tasks (materialized / virtual fixed / one-time) for the
 // next SYNC_DAYS+1 days using the same business logic as the UI, and derive
 // the full alarm payloads to schedule natively.
+// Stable fingerprint of everything that affects how an alarm fires. Baked
+// into the alarm id so that changing any related setting causes the diff to
+// cancel the stale alarm and schedule a fresh one.
+function alarmFingerprint(settings: AppSettings, style: "notification" | "alarm"): string {
+  return [
+    settings.reminderLeadMinutes,
+    style === "alarm" ? "a" : "n",
+    settings.alarmOnlyWhenLocked ? "L1" : "L0",
+    settings.snoozeMinutes,
+  ].join("-");
+}
+
 export async function computeDesiredAlarmPayloads(): Promise<
-  Array<{ id: string; title: string; body: string; fireAt: number }>
+  Array<{
+    id: string;
+    title: string;
+    body: string;
+    fireAt: number;
+    fullAlarm: boolean;
+    onlyWhenLocked: boolean;
+    snoozeMinutes: number;
+  }>
 > {
   const settings = getSettings();
-  const payloads: Array<{ id: string; title: string; body: string; fireAt: number }> = [];
+  type Payload = {
+    id: string;
+    title: string;
+    body: string;
+    fireAt: number;
+    fullAlarm: boolean;
+    onlyWhenLocked: boolean;
+    snoozeMinutes: number;
+  };
+  const payloads: Payload[] = [];
   if (!settings.notificationsEnabled) return payloads;
 
   for (let i = 0; i <= SYNC_DAYS; i++) {
@@ -50,19 +79,27 @@ export async function computeDesiredAlarmPayloads(): Promise<
       const start = taskStartMillis(task, dateStr);
       if (start === null || start <= Date.now()) continue;
 
+      // Per-task reminder mode; 'none' opts out entirely.
+      const mode = task.reminder ?? "inherit";
+      if (mode === "none") continue;
+      const style: "notification" | "alarm" =
+        mode === "inherit" ? settings.alarmStyle : mode;
+
       // Only schedule reminders that are still fully in the future. We never
       // retro-fire: if the lead time already passed at sync time, the reminder
-      // for that occurrence is dropped (it will not be re-created later,
-      // preventing duplicate/repeating notifications).
+      // for that occurrence is dropped (and never re-created later).
       const fireAt = start - Math.max(0, settings.reminderLeadMinutes) * 60_000;
       if (fireAt <= Date.now()) continue;
 
-      const id = `${task.id}#${dateStr}`;
+      const id = `${task.id}#${dateStr}#${alarmFingerprint(settings, style)}`;
       payloads.push({
         id,
         title: task.title || "Task",
         body: alarmBody(task),
         fireAt,
+        fullAlarm: style === "alarm",
+        onlyWhenLocked: settings.alarmOnlyWhenLocked,
+        snoozeMinutes: Math.max(1, Math.round(settings.snoozeMinutes)),
       });
     }
   }
@@ -128,7 +165,6 @@ export async function syncTaskAlarms(): Promise<void> {
         }
 
         // Schedule new/changed alarms.
-        const fullAlarm = settings.alarmStyle === "alarm";
         for (const p of payloads) {
           if (scheduled.get(p.id) !== p.fireAt) {
             console.log("[tw-sync] scheduling", p.id);
@@ -137,7 +173,9 @@ export async function syncTaskAlarms(): Promise<void> {
               title: p.title,
               body: p.body,
               fireAtMillis: Math.round(p.fireAt),
-              fullAlarm,
+              fullAlarm: p.fullAlarm,
+              onlyWhenLocked: p.onlyWhenLocked,
+              snoozeMinutes: p.snoozeMinutes,
             });
           }
         }

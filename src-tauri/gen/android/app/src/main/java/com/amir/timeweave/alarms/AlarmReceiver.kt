@@ -25,7 +25,9 @@ class AlarmReceiver : BroadcastReceiver() {
         context,
         id,
         item?.title ?: "",
-        item?.body ?: ""
+        item?.body ?: "",
+        item?.onlyWhenLocked ?: true,
+        item?.snoozeMinutes ?: 5
       )
     }
 

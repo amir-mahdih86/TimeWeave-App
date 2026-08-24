@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "tsc"
+    "check": "tsc",
+    "build:app": "vite build --mode app"
   },
   "dependencies": {
     "@fontsource-variable/outfit": "^5.2.5",

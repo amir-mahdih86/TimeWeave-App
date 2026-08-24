@@ -3,11 +3,17 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+// `vite build --mode app` produces the frontend embedded into the Tauri
+// Android/ desktop apps. There the service worker must stay unregistered:
+// the app is offline-capable by design and a precaching SW would keep
+// serving stale bundles across APK updates.
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      // Skip SW registration entirely for app builds.
+      injectRegister: mode === "app" ? null : "auto",
       includeAssets: ["favicon.png"],
       manifest: {
         name: "TimeWeave - Smart Weekly Planner",
@@ -53,4 +59,4 @@ export default defineConfig({
       deny: ["**/.*"],
     },
   },
-});
+}));

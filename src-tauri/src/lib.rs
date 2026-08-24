@@ -181,8 +181,10 @@ mod android {
         body: String,
         fire_at_millis: i64,
         full_alarm: bool,
+        only_when_locked: bool,
+        snooze_minutes: i64,
     ) -> Result<(), String> {
-        log::info!("[alarms] scheduling alarm id={id} at={fire_at_millis} full={full_alarm}");
+        log::info!("[alarms] scheduling alarm id={id} at={fire_at_millis} full={full_alarm} locked_only={only_when_locked} snooze={snooze_minutes}");
         with_webview_jni(app, "scheduleAlarm", move |env, activity| {
             let class = bridge_class(env, activity)?;
             let jid: JObject = env.new_string(&id)?.into();
@@ -192,7 +194,7 @@ mod android {
                 env,
                 &class,
                 "scheduleAlarm",
-                "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZ)V",
+                "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JZZI)V",
                 &[
                     activity.into(),
                     (&jid).into(),
@@ -200,6 +202,8 @@ mod android {
                     (&jbody).into(),
                     fire_at_millis.into(),
                     (full_alarm as u8).into(),
+                    (only_when_locked as u8).into(),
+                    (snooze_minutes as i32).into(),
                 ],
             )?;
             Ok(())
@@ -277,19 +281,21 @@ mod platform {
     }
 
     pub fn schedule_task_alarm(
-        app: &AppHandle,
+        _app: &AppHandle,
         id: String,
         _title: String,
         _body: String,
         fire_at_millis: i64,
         _full_alarm: bool,
+        _only_when_locked: bool,
+        _snooze_minutes: i64,
     ) -> Result<(), String> {
         log::info!(
             "schedule_task_alarm (desktop stub): {} at {}",
             id,
             fire_at_millis
         );
-        let _ = app;
+        let _ = _app;
         Ok(())
     }
 
@@ -335,8 +341,19 @@ fn schedule_task_alarm(
     body: String,
     fire_at_millis: i64,
     full_alarm: bool,
+    only_when_locked: bool,
+    snooze_minutes: i64,
 ) -> Result<(), String> {
-    platform::schedule_task_alarm(&app, id, title, body, fire_at_millis, full_alarm)
+    platform::schedule_task_alarm(
+        &app,
+        id,
+        title,
+        body,
+        fire_at_millis,
+        full_alarm,
+        only_when_locked,
+        snooze_minutes,
+    )
 }
 
 #[tauri::command]

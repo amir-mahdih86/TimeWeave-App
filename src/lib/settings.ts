@@ -6,6 +6,8 @@ export interface AppSettings {
   notificationsEnabled: boolean;
   reminderLeadMinutes: number; // minutes before task start
   alarmStyle: 'notification' | 'alarm';
+  alarmOnlyWhenLocked: boolean; // full-screen alarm only when screen is off
+  snoozeMinutes: number; // alarm snooze duration
 }
 
 const SETTINGS_KEY = 'timeweave-settings';
@@ -17,6 +19,8 @@ const defaultSettings: AppSettings = {
   notificationsEnabled: true,
   reminderLeadMinutes: 5,
   alarmStyle: 'alarm',
+  alarmOnlyWhenLocked: true,
+  snoozeMinutes: 5,
 };
 
 export function getSettings(): AppSettings {

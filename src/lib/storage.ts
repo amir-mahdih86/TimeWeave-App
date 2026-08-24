@@ -69,6 +69,7 @@ export async function addTask(task: InsertTask): Promise<Task> {
     color: task.color || 'hsl(262 83% 58%)',
     templateId: task.templateId || null,
     canceled: task.canceled || false,
+    reminder: task.reminder || 'inherit',
   };
   await db.put('tasks', newTask);
   
@@ -142,9 +143,10 @@ export async function materializeTasksForDate(date: string, forceCreate: boolean
         templateId: template.id,
         daysOfWeek: null,
         canceled: false,
+        reminder: template.reminder ?? 'inherit',
         createdAt: new Date(),
       };
-      
+
       await db.put('tasks', materializedTask);
       materializedTasks.push(materializedTask);
     }
