@@ -32,49 +32,55 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
       exit={{ opacity: 0, scale: 0.95 }}
       whileTap={{ scale: 0.98 }}
       className={clsx(
-        "relative group flex flex-col p-4 rounded-2xl border transition-all duration-300",
+        "relative group flex flex-col p-4 pl-5 rounded-2xl border transition-all duration-300 overflow-hidden",
         isDone 
-          ? "bg-card/50 border-border/50 opacity-60" 
+          ? "bg-card/40 border-border/40 opacity-55" 
           : isCurrentlyActive
-          ? "shadow-lg border-2"
-          : "bg-card border-border shadow-sm hover:shadow-md hover:border-primary/20"
+          ? "border-2"
+          : "bg-card border-border shadow-sm hover:shadow-md hover:border-primary/25"
       )}
       style={{
-        borderLeftWidth: '4px',
-        borderLeftColor: task.color || 'var(--primary)',
         ...(isCurrentlyActive && !isDone ? {
-          backgroundColor: task.color || 'var(--primary)',
+          backgroundColor: `color-mix(in srgb, ${task.color || 'var(--primary)'} 10%, var(--card))`,
           borderColor: task.color || 'var(--primary)',
-          boxShadow: `0 8px 25px -5px color-mix(in srgb, ${task.color || 'var(--primary)'} 25%, transparent)`,
-          color: 'white'
+          boxShadow: `0 8px 25px -8px color-mix(in srgb, ${task.color || 'var(--primary)'} 35%, transparent)`,
         } : {})
       }}
     >
+      {/* Rounded color accent */}
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute left-0 top-3 bottom-3 w-1.5 rounded-full transition-opacity",
+          isDone && "opacity-30"
+        )}
+        style={{ backgroundColor: task.color || 'var(--primary)' }}
+      />
       <div className="flex items-start justify-between gap-3">
         <div 
           className="flex-1 cursor-pointer" 
           onClick={onClick}
         >
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className={clsx(
-              "text-xs font-bold px-2 py-0.5 rounded-full",
+              "text-xs font-bold px-2 py-0.5 rounded-full tabular-nums",
               isDone 
                 ? "bg-muted text-muted-foreground" 
                 : isCurrentlyActive
-                ? "text-white"
+                ? ""
                 : "bg-primary/10 text-primary"
             )}
             style={isCurrentlyActive && !isDone ? {
-              backgroundColor: `color-mix(in srgb, ${task.color || 'var(--primary)'} 100%, black 7%)`,
-              color: 'white'
+              backgroundColor: `color-mix(in srgb, ${task.color || 'var(--primary)'} 18%, transparent)`,
+              color: task.color || 'var(--primary)'
             } : {}}
             >
-              {formatTime(task.startTime, settings.timeFormat)} - {formatTime(task.endTime, settings.timeFormat)}
+              {formatTime(task.startTime, settings.timeFormat)} – {formatTime(task.endTime, settings.timeFormat)}
             </span>
             <span className="text-xs flex items-center gap-1">
-              <Clock className={clsx("w-3 h-3", isCurrentlyActive && !isDone ? "text-white/80" : "text-muted-foreground")} />
+              <Clock className={clsx("w-3 h-3", isCurrentlyActive && !isDone ? "text-muted-foreground" : "text-muted-foreground")} />
               <span className={clsx(
-                isCurrentlyActive && !isDone ? "text-white/90 font-semibold" : "text-muted-foreground font-normal"
+                isCurrentlyActive && !isDone ? "font-semibold text-foreground" : "text-muted-foreground font-normal"
               )}>
                 {duration}m
               </span>
@@ -86,8 +92,14 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
               </span>
             )}
             {isCurrentlyActive && !isDone && (
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/20 text-white animate-pulse">
-                • ACTIVE
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full animate-pulse"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${task.color || 'var(--primary)'} 22%, transparent)`,
+                  color: task.color || 'var(--primary)'
+                }}
+              >
+                • Active now
               </span>
             )}
           </div>
@@ -96,8 +108,6 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
             "font-semibold text-lg leading-tight mb-1 transition-all",
             isDone 
               ? "line-through text-muted-foreground" 
-              : isCurrentlyActive 
-              ? "text-white" 
               : "text-foreground"
           )}>
             {task.title}
@@ -106,7 +116,7 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
           {task.description && (
             <p className={clsx(
               "text-sm line-clamp-2",
-              isCurrentlyActive && !isDone ? "text-white/80" : "text-muted-foreground"
+              isDone ? "text-muted-foreground/70" : "text-muted-foreground"
             )}>
               {task.description}
             </p>
@@ -119,16 +129,14 @@ export function TaskCard({ task, isDone, onToggle, onClick }: TaskCardProps) {
             onToggle();
           }}
           className={clsx(
-            "mt-1 p-1 rounded-full transition-all duration-300",
+            "mt-1 p-1 rounded-full transition-all duration-300 active:scale-90",
             isDone 
               ? "text-primary" 
-              : isCurrentlyActive
-              ? "text-white/80 hover:text-white hover:bg-white/10"
-              : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+              : "text-muted-foreground/60 hover:text-primary hover:bg-primary/10"
           )}
         >
           {isDone ? (
-            <CheckCircle2 className="w-8 h-8 fill-primary/10" />
+            <CheckCircle2 className="w-8 h-8 fill-primary/15" />
           ) : (
             <Circle className="w-8 h-8" strokeWidth={1.5} />
           )}

@@ -7,9 +7,10 @@ import { OneTimeTaskModal } from "@/components/OneTimeTaskModal";
 import { FixedTaskEditModal } from "@/components/FixedTaskEditModal";
 import { CanceledTasksModal } from "@/components/CanceledTasksModal";
 import { Navigation } from "@/components/Navigation";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Home as HomeIcon, Archive } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Home as HomeIcon, Archive, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Task } from "@/lib/schema";
+import { clsx } from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Home() {
@@ -104,11 +105,20 @@ export default function Home() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-md mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">TimeWeave</h1>
-              <p className="text-sm text-muted-foreground">
-                {format(selectedDate, "MMMM yyyy")}
-              </p>
+            <div className="flex items-center gap-2.5">
+              <span
+                aria-hidden
+                className="h-9 w-9 rounded-xl flex items-center justify-center shadow-md shadow-primary/30"
+                style={{ background: 'linear-gradient(135deg, hsl(262 83% 58%), hsl(280 75% 62%))' }}
+              >
+                <CalendarDays className="w-5 h-5 text-primary-foreground" />
+              </span>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground leading-none">TimeWeave</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {format(selectedDate, "MMMM yyyy")}
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               {!isToday && (
@@ -123,7 +133,7 @@ export default function Home() {
               )}
               <Button 
                 size="icon" 
-                className="rounded-full shadow-lg shadow-primary/25"
+                className="rounded-full shadow-lg shadow-primary/25 active:scale-95 transition-transform"
                 onClick={() => handleCreateTask()}
               >
                 <Plus className="w-5 h-5" />
@@ -137,19 +147,19 @@ export default function Home() {
               variant="ghost" 
               size="sm" 
               onClick={() => setSelectedDate(subDays(selectedDate, 1))}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 rounded-lg active:scale-90 transition-transform"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <span className="font-semibold text-sm">
-              {isToday ? "Today, " : ""}
+            <span className={clsx("text-sm", isToday ? "font-bold text-primary" : "font-semibold")}>
+              {isToday ? "Today · " : ""}
               {format(selectedDate, "EEE d")}
             </span>
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setSelectedDate(addDays(selectedDate, 1))}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 rounded-lg active:scale-90 transition-transform"
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
