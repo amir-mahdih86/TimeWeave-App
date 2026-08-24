@@ -22,6 +22,7 @@ import {
   seedInitialData
 } from "@/lib/storage";
 import { InsertTask, InsertException } from "@/lib/schema";
+import { syncTaskAlarms } from "@/lib/task-alarms";
 
 // Initialize DB and seed data
 initDB().then(() => {
@@ -97,6 +98,7 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       // Also invalidate date range queries for reports
       queryClient.invalidateQueries({ queryKey: ['tasks', 'range'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -107,6 +109,7 @@ export function useUpdateTask() {
     mutationFn: ({ id, ...updates }: { id: string } & Partial<InsertTask>) => updateTask(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -118,6 +121,7 @@ export function useUpdateFixedTaskTemplate() {
       updateFixedTaskTemplate(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -129,6 +133,7 @@ export function useDeleteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -140,6 +145,7 @@ export function useDeleteFixedTaskTemplate() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -150,6 +156,7 @@ export function useAddException() {
     mutationFn: (data: InsertException) => addException(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['exceptions'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -162,6 +169,7 @@ export function useUpdateFixedTaskForFuture() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['exceptions'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -174,6 +182,7 @@ export function useDeleteFixedTaskForFuture() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['exceptions'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -185,6 +194,7 @@ export function useToggleCompletion() {
       toggleCompletion(taskId, date, isDone),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['completions'] });
+      void syncTaskAlarms();
     },
   });
 }
@@ -196,6 +206,7 @@ export function useRestoreTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['canceled-tasks'] });
+      void syncTaskAlarms();
     },
   });
 }

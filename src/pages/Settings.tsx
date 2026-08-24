@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Settings as SettingsIcon, Clock, Calendar, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { Settings as SettingsIcon, Clock, Calendar, Trash2, Loader2, CheckCircle, BellRing } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSettings } from "@/hooks/use-settings";
 import { useQueryClient } from "@tanstack/react-query";
+import { isNative, safeInvoke } from "@/lib/native";
+import { syncTaskAlarms } from "@/lib/task-alarms";
+
+interface PermissionStatus {
+  notifications: boolean;
+  exact_alarms: boolean;
+  battery_exempt: boolean;
+}
 
 export default function Settings() {
   const { settings, updateSettings } = useSettings();
@@ -16,6 +24,38 @@ export default function Settings() {
   const [clearDataConfirm, setClearDataConfirm] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [clearSuccess, setClearSuccess] = useState(false);
+
+  const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
+
+  const refreshPermissions = useCallback(async () => {
+    const status = await safeInvoke<PermissionStatus>("get_permission_status");
+    setPermissions(status);
+  }, []);
+
+  useEffect(() => {
+    if (!isNative()) return;
+    void refreshPermissions();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshPermissions();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [refreshPermissions]);
+
+  const handleGrantNotifications = async () => {
+    await safeInvoke<boolean>("request_notification_permission");
+    setTimeout(() => void refreshPermissions(), 1500);
+  };
+
+  const handleExactAlarmSettings = () => {
+    void safeInvoke("open_exact_alarm_settings");
+    setTimeout(() => void refreshPermissions(), 1500);
+  };
+
+  const handleBatteryExemption = async () => {
+    await safeInvoke<boolean>("request_ignore_battery_optimizations");
+    setTimeout(() => void refreshPermissions(), 1500);
+  };
 
   const handleClearAllData = async () => {
     if (!clearDataConfirm) {
@@ -130,6 +170,134 @@ export default function Settings() {
                 onCheckedChange={(checked) => updateSettings({ showCompletedTasks: checked })}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Reminders & Alarms */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-medium flex items-center gap-2">
+              <BellRing className="w-4 h-4" />
+              Reminders &amp; Alarms
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!isNative() && (
+              <Alert>
+                <AlertDescription>
+                  Notifications and alarms are available in the Android app.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="notificationsEnabled">Task reminders</Label>
+                <p className="text-xs text-muted-foreground">
+                  Notify me for every scheduled task
+                </p>
+              </div>
+              <Switch
+                id="notificationsEnabled"
+                checked={settings.notificationsEnabled}
+                onCheckedChange={(checked) => {
+                  updateSettings({ notificationsEnabled: checked });
+                  void syncTaskAlarms();
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="leadMinutes">Remind me</Label>
+              <Select
+                value={String(settings.reminderLeadMinutes)}
+                onValueChange={(value: string) => {
+                  updateSettings({ reminderLeadMinutes: Number(value) });
+                  void syncTaskAlarms();
+                }}
+                disabled={!settings.notificationsEnabled}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Exactly at start time</SelectItem>
+                  <SelectItem value="1">1 minute before</SelectItem>
+                  <SelectItem value="5">5 minutes before</SelectItem>
+                  <SelectItem value="10">10 minutes before</SelectItem>
+                  <SelectItem value="15">15 minutes before</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="alarmStyle">Reminder style</Label>
+              <Select
+                value={settings.alarmStyle}
+                onValueChange={(value: 'notification' | 'alarm') => {
+                  updateSettings({ alarmStyle: value });
+                  void syncTaskAlarms();
+                }}
+                disabled={!settings.notificationsEnabled}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="notification">Heads-up notification</SelectItem>
+                  <SelectItem value="alarm">Full-screen alarm (works on lock screen)</SelectItem>
+                </SelectContent>
+              </Select>
+              {settings.alarmStyle === 'alarm' && (
+                <p className="text-xs text-muted-foreground">
+                  The alarm turns the screen on, rings and vibrates until dismissed.
+                </p>
+              )}
+            </div>
+
+            {isNative() && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label>System permissions</Label>
+
+                {(
+                  [
+                    {
+                      key: "notifications",
+                      label: "Notifications",
+                      granted: permissions?.notifications,
+                      action: handleGrantNotifications,
+                    },
+                    {
+                      key: "exact_alarms",
+                      label: "Exact alarms",
+                      granted: permissions?.exact_alarms,
+                      action: handleExactAlarmSettings,
+                    },
+                    {
+                      key: "battery_exempt",
+                      label: "Run while screen is off",
+                      granted: permissions?.battery_exempt,
+                      action: handleBatteryExemption,
+                    },
+                  ] as const
+                ).map(row => (
+                  <div key={row.key} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">{row.label}</span>
+                    {row.granted === true ? (
+                      <span className="text-sm text-green-600 dark:text-green-400">Allowed</span>
+                    ) : (
+                      <Button size="sm" variant="outline" onClick={row.action}>
+                        {row.granted === false ? "Allow" : "Check"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+
+                <p className="text-xs text-muted-foreground pt-1">
+                  Grant all three so alarms fire reliably when the screen is off.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

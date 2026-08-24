@@ -3,6 +3,9 @@ export interface AppSettings {
   timeFormat: '12' | '24';
   weekStartsOn: '0' | '6'; // 0 = Sunday, 6 = Saturday
   showCompletedTasks: boolean;
+  notificationsEnabled: boolean;
+  reminderLeadMinutes: number; // minutes before task start
+  alarmStyle: 'notification' | 'alarm';
 }
 
 const SETTINGS_KEY = 'timeweave-settings';
@@ -11,6 +14,9 @@ const defaultSettings: AppSettings = {
   timeFormat: '24',
   weekStartsOn: '0',
   showCompletedTasks: true,
+  notificationsEnabled: true,
+  reminderLeadMinutes: 5,
+  alarmStyle: 'alarm',
 };
 
 export function getSettings(): AppSettings {
