@@ -11,6 +11,7 @@ import { useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/use-tasks";
 import { useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import { z } from "zod";
+import { todayLocalISO } from "@/lib/utils";
 
 // Extended schema for form validation
 const formSchema = insertTaskSchema.extend({
@@ -42,7 +43,7 @@ export function TaskModal({ open, onOpenChange, initialData, defaultDate, defaul
       endTime: defaultEndTime || "10:00",
       color: "hsl(262 83% 58%)",
       daysOfWeek: [1, 2, 3, 4, 5],
-      date: defaultDate || new Date().toISOString().split('T')[0],
+      date: defaultDate || todayLocalISO(),
     }
   });
 
@@ -53,7 +54,7 @@ export function TaskModal({ open, onOpenChange, initialData, defaultDate, defaul
           ...initialData,
           description: initialData.description || "",
           daysOfWeek: initialData.daysOfWeek || [1, 2, 3, 4, 5],
-          date: initialData.date || new Date().toISOString().split('T')[0],
+          date: initialData.date || todayLocalISO(),
         });
       } else {
         form.reset({
@@ -64,7 +65,7 @@ export function TaskModal({ open, onOpenChange, initialData, defaultDate, defaul
           endTime: defaultEndTime || "10:00",
           color: "hsl(262 83% 58%)",
           daysOfWeek: [1, 2, 3, 4, 5],
-          date: defaultDate || new Date().toISOString().split('T')[0],
+          date: defaultDate || todayLocalISO(),
         });
       }
     }

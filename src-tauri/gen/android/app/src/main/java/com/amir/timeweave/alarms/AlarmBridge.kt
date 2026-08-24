@@ -85,6 +85,27 @@ object AlarmBridge {
   }
 
   @JvmStatic
+  fun canDrawOverlays(context: Context): Boolean =
+    Settings.canDrawOverlays(context)
+
+  @JvmStatic
+  fun requestOverlayPermission(activity: Activity) {
+    try {
+      activity.startActivity(
+        Intent(
+          Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+          Uri.parse("package:${activity.packageName}")
+        )
+      )
+    } catch (_: Exception) {
+      try {
+        activity.startActivity(Intent(Settings.ACTION_SETTINGS))
+      } catch (_: Exception) {
+      }
+    }
+  }
+
+  @JvmStatic
   fun isIgnoringBatteryOptimizations(context: Context): Boolean {
     val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
     return pm.isIgnoringBatteryOptimizations(context.packageName)

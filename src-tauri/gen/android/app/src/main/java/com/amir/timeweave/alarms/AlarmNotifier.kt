@@ -62,6 +62,23 @@ object AlarmNotifier {
       putExtra(AlarmActivity.EXTRA_ONLY_WHEN_LOCKED, onlyWhenLocked)
       putExtra(AlarmActivity.EXTRA_SNOOZE_MINUTES, snoozeMinutes)
     }
+
+    // While the screen is on and unlocked, Android refuses to launch
+    // full-screen-intent activities. With the overlay permission we can
+    // start the alarm activity directly instead.
+    val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+    val screenOn = pm.isInteractive
+    android.util.Log.i("TimeWeaveAlarm", "postAlarm: screenOn=$screenOn onlyWhenLocked=$onlyWhenLocked overlay=${android.provider.Settings.canDrawOverlays(context)}")
+    if (screenOn && !onlyWhenLocked && android.provider.Settings.canDrawOverlays(context)) {
+      try {
+        context.startActivity(fullScreenIntent)
+        android.util.Log.i("TimeWeaveAlarm", "startActivity OK (screen-on alarm)")
+        return
+      } catch (e: Exception) {
+        android.util.Log.w("TimeWeaveAlarm", "startActivity failed: $e")
+        // fall through to the notification path
+      }
+    }
     val fullScreenPendingIntent = PendingIntent.getActivity(
       context,
       AlarmScheduler.requestCode(id),

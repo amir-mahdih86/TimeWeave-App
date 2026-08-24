@@ -5,6 +5,7 @@ pub struct PermissionStatus {
     pub notifications: bool,
     pub exact_alarms: bool,
     pub battery_exempt: bool,
+    pub overlay: bool,
 }
 
 #[cfg(target_os = "android")]
@@ -121,11 +122,20 @@ mod android {
                 &[activity.into()],
             )?
             .z()?;
+            let overlay = call_static(
+                env,
+                &class,
+                "canDrawOverlays",
+                "(Landroid/content/Context;)Z",
+                &[activity.into()],
+            )?
+            .z()?;
 
             Ok(PermissionStatus {
                 notifications,
                 exact_alarms,
                 battery_exempt,
+                overlay,
             })
         })
     }
@@ -171,6 +181,20 @@ mod android {
             )?
             .z()?;
             Ok(granted)
+        })
+    }
+
+    pub fn request_overlay_permission(app: &AppHandle) -> Result<(), String> {
+        with_webview_jni(app, "requestOverlayPermission", |env, activity| {
+            let class = bridge_class(env, activity)?;
+            call_static(
+                env,
+                &class,
+                "requestOverlayPermission",
+                "(Landroid/app/Activity;)V",
+                &[activity.into()],
+            )?;
+            Ok(())
         })
     }
 
@@ -265,6 +289,7 @@ mod platform {
             notifications: true,
             exact_alarms: true,
             battery_exempt: true,
+            overlay: true,
         })
     }
 
@@ -278,6 +303,10 @@ mod platform {
 
     pub fn request_ignore_battery_optimizations(_app: &AppHandle) -> Result<bool, String> {
         Ok(true)
+    }
+
+    pub fn request_overlay_permission(_app: &AppHandle) -> Result<(), String> {
+        Ok(())
     }
 
     pub fn schedule_task_alarm(
@@ -334,6 +363,11 @@ fn request_ignore_battery_optimizations(app: tauri::AppHandle) -> Result<bool, S
 }
 
 #[tauri::command]
+fn request_overlay_permission(app: tauri::AppHandle) -> Result<(), String> {
+    platform::request_overlay_permission(&app)
+}
+
+#[tauri::command]
 fn schedule_task_alarm(
     app: tauri::AppHandle,
     id: String,
@@ -385,6 +419,7 @@ pub fn run() {
       request_notification_permission,
       open_exact_alarm_settings,
       request_ignore_battery_optimizations,
+      request_overlay_permission,
       schedule_task_alarm,
       cancel_task_alarm,
       scheduled_alarm_ids,

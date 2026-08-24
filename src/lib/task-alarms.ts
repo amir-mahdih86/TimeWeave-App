@@ -63,6 +63,8 @@ export async function computeDesiredAlarmPayloads(): Promise<
   const payloads: Payload[] = [];
   if (!settings.notificationsEnabled) return payloads;
 
+  const now = Date.now();
+
   for (let i = 0; i <= SYNC_DAYS; i++) {
     const day = addDays(startOfDay(new Date()), i);
     const dateStr = format(day, "yyyy-MM-dd");
@@ -85,11 +87,12 @@ export async function computeDesiredAlarmPayloads(): Promise<
       const style: "notification" | "alarm" =
         mode === "inherit" ? settings.alarmStyle : mode;
 
-      // Only schedule reminders that are still fully in the future. We never
-      // retro-fire: if the lead time already passed at sync time, the reminder
-      // for that occurrence is dropped (and never re-created later).
-      const fireAt = start - Math.max(0, settings.reminderLeadMinutes) * 60_000;
-      if (fireAt <= Date.now()) continue;
+      // Schedule the reminder at (start - lead), but never in the past: for
+      // near-term tasks fall back to firing exactly at the task start. The
+      // fallback is stable across syncs (it derives from the task itself, not
+      // from the current clock), so it cannot cause re-scheduling loops.
+      const rawFireAt = start - Math.max(0, settings.reminderLeadMinutes) * 60_000;
+      const fireAt = rawFireAt > now ? rawFireAt : start;
 
       const id = `${task.id}#${dateStr}#${alarmFingerprint(settings, style)}`;
       payloads.push({

@@ -12,6 +12,7 @@ import { useCreateTask, useUpdateTask, useDeleteTask, useTasks } from "@/hooks/u
 import { useEffect, useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { z } from "zod";
+import { todayLocalISO } from "@/lib/utils";
 import { validateTask } from "@/lib/validation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -61,7 +62,7 @@ export function OneTimeTaskModal({
       startTime: defaultStartTime || "09:00",
       endTime: defaultEndTime || "10:00",
       color: "hsl(262 83% 58%)",
-      date: defaultDate || new Date().toISOString().split('T')[0],
+      date: defaultDate || todayLocalISO(),
     }
   });
 
@@ -76,7 +77,7 @@ export function OneTimeTaskModal({
           startTime: initialData.startTime,
           endTime: initialData.endTime,
           color: initialData.color || "hsl(262 83% 58%)",
-          date: initialData.date || new Date().toISOString().split('T')[0],
+          date: initialData.date || todayLocalISO(),
         });
       } else {
         setReminder('inherit');
@@ -87,7 +88,7 @@ export function OneTimeTaskModal({
           startTime: defaultStartTime || "09:00",
           endTime: defaultEndTime || "10:00",
           color: "hsl(262 83% 58%)",
-          date: defaultDate || new Date().toISOString().split('T')[0],
+          date: defaultDate || todayLocalISO(),
         });
       }
     }

@@ -16,6 +16,7 @@ interface PermissionStatus {
   notifications: boolean;
   exact_alarms: boolean;
   battery_exempt: boolean;
+  overlay: boolean;
 }
 
 export default function Settings() {
@@ -54,6 +55,11 @@ export default function Settings() {
 
   const handleBatteryExemption = async () => {
     await safeInvoke<boolean>("request_ignore_battery_optimizations");
+    setTimeout(() => void refreshPermissions(), 1500);
+  };
+
+  const handleOverlayPermission = () => {
+    void safeInvoke("request_overlay_permission");
     setTimeout(() => void refreshPermissions(), 1500);
   };
 
@@ -323,6 +329,12 @@ export default function Settings() {
                       label: "Run while screen is off",
                       granted: permissions?.battery_exempt,
                       action: handleBatteryExemption,
+                    },
+                    {
+                      key: "overlay",
+                      label: "Alarm while screen is on",
+                      granted: permissions?.overlay,
+                      action: handleOverlayPermission,
                     },
                   ] as const
                 ).map(row => (

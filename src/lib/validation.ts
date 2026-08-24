@@ -1,4 +1,5 @@
 import { Task } from "@/lib/schema";
+import { todayLocalISO } from "@/lib/utils";
 
 export interface TimeSlot {
   startTime: string;
@@ -18,7 +19,7 @@ export function minutesToTime(minutes: number): string {
 
 export function isTaskCurrentlyActive(task: { startTime: string; endTime: string; date?: string | null }): boolean {
   // Only check for current activity if it's today
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+  const today = todayLocalISO();
   if (task.date && task.date !== today) {
     return false;
   }

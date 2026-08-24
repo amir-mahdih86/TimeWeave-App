@@ -46,6 +46,7 @@ class AlarmActivity : Activity() {
     // If alarms should only interrupt while the screen is off/locked, degrade
     // to the (already posted) heads-up notification when the device is in use.
     val onlyWhenLocked = intent.getBooleanExtra(EXTRA_ONLY_WHEN_LOCKED, true)
+    android.util.Log.i("TimeWeaveAlarm", "AlarmActivity onCreate: onlyWhenLocked=$onlyWhenLocked screenOn=${isScreenOn()}")
     if (onlyWhenLocked && isScreenOn()) {
       finishAndRemoveTask()
       return
