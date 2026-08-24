@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertTaskSchema, InsertTask, ReminderMode } from "@/lib/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TimePicker } from "@/components/ui/time-picker";
 import { useCreateTask, useUpdateTask, useDeleteTask, useTasks } from "@/hooks/use-tasks";
 import { useEffect, useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
@@ -171,11 +172,19 @@ export function OneTimeTaskModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
-              <Input type="time" id="startTime" {...form.register("startTime")} />
+              <TimePicker
+                id="startTime"
+                value={form.watch("startTime")}
+                onChange={(v) => form.setValue("startTime", v, { shouldValidate: true })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time</Label>
-              <Input type="time" id="endTime" {...form.register("endTime")} />
+              <TimePicker
+                id="endTime"
+                value={form.watch("endTime")}
+                onChange={(v) => form.setValue("endTime", v, { shouldValidate: true })}
+              />
             </div>
           </div>
 

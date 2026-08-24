@@ -10,6 +10,7 @@ import { useAddException } from "@/hooks/use-tasks";
 import { useEffect } from "react";
 import { Calendar } from "lucide-react";
 import { z } from "zod";
+import { TimePicker } from "@/components/ui/time-picker";
 import { v4 as uuidv4 } from 'uuid';
 
 // Extended schema for form validation
@@ -129,11 +130,19 @@ export function FixedTaskExceptionModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="startTime">Start Time</Label>
-              <Input type="time" id="startTime" {...form.register("startTime")} />
+              <TimePicker
+                id="startTime"
+                value={form.watch("startTime")}
+                onChange={(v) => form.setValue("startTime", v, { shouldValidate: true })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Time</Label>
-              <Input type="time" id="endTime" {...form.register("endTime")} />
+              <TimePicker
+                id="endTime"
+                value={form.watch("endTime")}
+                onChange={(v) => form.setValue("endTime", v, { shouldValidate: true })}
+              />
             </div>
           </div>
 
