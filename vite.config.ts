@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => ({
         short_name: "TimeWeave",
         description:
           "A smart weekly planner for managing fixed and one-time tasks",
-        theme_color: "#8b5cf6",
-        background_color: "#ffffff",
+        theme_color: "#005555",
+        background_color: "#004646",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

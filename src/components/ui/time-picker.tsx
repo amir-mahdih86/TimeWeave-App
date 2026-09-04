@@ -43,11 +43,15 @@ function Wheel<T extends number | string>({
   index,
   onIndexChange,
   render,
+  revision,
 }: {
   items: T[];
   index: number;
   onIndexChange: (index: number) => void;
   render: (item: T, selected: boolean) => React.ReactNode;
+  /** Bumped by the parent whenever the selection is changed externally
+   * (dialog opened, "Now" pressed) and the wheel must re-center. */
+  revision: number;
 }) {
   const len = items.length;
   const ref = useRef<HTMLDivElement>(null);
@@ -63,10 +67,21 @@ function Wheel<T extends number | string>({
   };
 
   useEffect(() => {
-    scrollToAbs(absRef.current, false);
-    programmaticUntil.current = Date.now() + 80;
+    // Center on the current selection. Two animation frames: the first lets
+    // the dialog finish mounting, otherwise instant scrollTo is dropped and
+    // the wheel would sometimes open at the wrong position.
+    absRef.current = len + index;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => scrollToAbs(absRef.current, false));
+    });
+    programmaticUntil.current = Date.now() + 350;
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [len]);
+  }, [revision, len]);
 
   const settle = () => {
     const el = ref.current;
@@ -149,6 +164,9 @@ export function TimePicker({ value, onChange, id, disabled, className }: TimePic
   );
   const [minuteIdx, setMinuteIdx] = useState(() => initial.m);
   const [pm, setPm] = useState(() => initial.h >= 12);
+  // Bumped whenever the draft is changed programmatically (open / Now) so
+  // the wheels re-center to the new selection.
+  const [revision, setRevision] = useState(0);
 
   const hours = useMemo(
     () => (is12h ? Array.from({ length: 12 }, (_, i) => i + 1) : Array.from({ length: 24 }, (_, i) => i)),
@@ -178,6 +196,7 @@ export function TimePicker({ value, onChange, id, disabled, className }: TimePic
     setHourIdx(is12h ? (p.h % 12 === 0 ? 11 : (p.h % 12) - 1) : p.h);
     setMinuteIdx(p.m);
     setPm(p.h >= 12);
+    setRevision(r => r + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -191,6 +210,7 @@ export function TimePicker({ value, onChange, id, disabled, className }: TimePic
     setHourIdx(is12h ? (d.getHours() % 12 === 0 ? 11 : (d.getHours() % 12) - 1) : d.getHours());
     setMinuteIdx(d.getMinutes());
     setPm(d.getHours() >= 12);
+    setRevision(r => r + 1);
   };
 
   const preview = `${pad(draftH24)}:${pad(minuteIdx)}`;
@@ -230,6 +250,7 @@ export function TimePicker({ value, onChange, id, disabled, className }: TimePic
                 <Wheel
                   items={hours}
                   index={hourIdx}
+                  revision={revision}
                   onIndexChange={setHourIdx}
                   render={(h, sel) => (
                     <span className={cn("text-lg tabular-nums", sel ? "font-bold text-foreground" : "text-muted-foreground")}>
@@ -246,6 +267,7 @@ export function TimePicker({ value, onChange, id, disabled, className }: TimePic
                 <Wheel
                   items={minutes}
                   index={minuteIdx}
+                  revision={revision}
                   onIndexChange={setMinuteIdx}
                   render={(m, sel) => (
                     <span className={cn("text-lg tabular-nums", sel ? "font-bold text-foreground" : "text-muted-foreground")}>

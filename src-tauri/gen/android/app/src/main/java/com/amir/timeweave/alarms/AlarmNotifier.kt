@@ -12,6 +12,13 @@ import com.amir.timeweave.MainActivity
 import com.amir.timeweave.R
 
 object AlarmNotifier {
+  private fun largeIcon(context: Context): android.graphics.Bitmap? =
+    try {
+      android.graphics.BitmapFactory.decodeResource(context.resources, R.mipmap.ic_launcher)
+    } catch (_: Exception) {
+      null
+    }
+
   const val CHANNEL_ALARMS = "timeweave_alarms"
   const val CHANNEL_REMINDERS = "timeweave_reminders"
 
@@ -105,6 +112,7 @@ object AlarmNotifier {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setFullScreenIntent(fullScreenPendingIntent, true)
       .setContentIntent(contentIntent)
+      .setLargeIcon(largeIcon(context))
       .setAutoCancel(true)
       .setTimeoutAfter(10 * 60_000L)
       .setDefaults(0)
@@ -143,6 +151,7 @@ object AlarmNotifier {
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .setAutoCancel(true)
       .setTimeoutAfter(90_000L)
+      .setLargeIcon(largeIcon(context))
       .setContentIntent(contentIntent)
       .build()
 

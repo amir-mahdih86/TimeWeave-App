@@ -1,0 +1,33 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#006969"/>
+      <stop offset="1" stop-color="#004646"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square background -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="url(#bg)"/>
+
+  <!-- woven threads: horizontal -->
+  <g stroke="#00F7F7" stroke-opacity="0.28" stroke-width="26" stroke-linecap="round">
+    <line x1="200" y1="330" x2="824" y2="330"/>
+    <line x1="200" y1="512" x2="824" y2="512"/>
+    <line x1="200" y1="694" x2="824" y2="694"/>
+  </g>
+  <!-- woven threads: vertical -->
+  <g stroke="#00F7F7" stroke-opacity="0.28" stroke-width="26" stroke-linecap="round">
+    <line x1="330" y1="200" x2="330" y2="824"/>
+    <line x1="512" y1="200" x2="512" y2="824"/>
+    <line x1="694" y1="200" x2="694" y2="824"/>
+  </g>
+
+  <!-- clock face -->
+  <circle cx="512" cy="512" r="240" fill="#FFFFFF"/>
+  <circle cx="512" cy="512" r="240" fill="none" stroke="#00ABAB" stroke-width="24"/>
+  <g stroke="#005555" stroke-width="22" stroke-linecap="round">
+    <line x1="512" y1="512" x2="512" y2="368"/>
+    <line x1="512" y1="512" x2="628" y2="578"/>
+  </g>
+  <circle cx="512" cy="512" r="26" fill="#005555"/>
+</svg>

@@ -5,6 +5,15 @@ export function isNative(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
+// True only on the Android app; false on desktop and in browsers.
+export function isAndroid(): boolean {
+  return (
+    isNative() &&
+    typeof navigator !== "undefined" &&
+    /android/i.test(navigator.userAgent)
+  );
+}
+
 // invoke that silently no-ops outside Tauri (pure web dev) and logs failures.
 export async function safeInvoke<T>(
   cmd: string,

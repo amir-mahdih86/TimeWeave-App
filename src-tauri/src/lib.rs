@@ -277,10 +277,65 @@ use android as platform;
 #[cfg(not(target_os = "android"))]
 mod platform {
     use super::PermissionStatus;
+    use std::collections::HashMap;
+    use std::sync::mpsc::Sender;
+    use std::sync::{Mutex, OnceLock};
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
     use tauri::AppHandle;
+    use tauri_plugin_notification::NotificationExt;
 
+    struct DesktopAlarm {
+        fire_at_millis: i64,
+        cancel: Sender<()>,
+    }
+
+    fn alarms() -> &'static Mutex<HashMap<String, DesktopAlarm>> {
+        static ALARMS: OnceLock<Mutex<HashMap<String, DesktopAlarm>>> = OnceLock::new();
+        ALARMS.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    fn now_millis() -> i64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_millis() as i64)
+            .unwrap_or(0)
+    }
+
+    // Writes the embedded app icon to a temp file once and returns its path,
+    // so notification daemons (KDE/GNOME) can render it even when the app is
+    // running from an AppImage with no installed theme icon.
+    fn notification_icon_path() -> Option<std::path::PathBuf> {
+        static ICON_PATH: OnceLock<Option<std::path::PathBuf>> = OnceLock::new();
+        ICON_PATH
+            .get_or_init(|| {
+                const ICON_PNG: &[u8] = include_bytes!("../icons/icon.png");
+                let path = std::env::temp_dir().join("timeweave-notification.png");
+                match std::fs::write(&path, ICON_PNG) {
+                    Ok(()) => Some(path),
+                    Err(e) => {
+                        log::warn!("[alarms] could not write notification icon: {e}");
+                        None
+                    }
+                }
+            })
+            .clone()
+    }
+
+    fn show_notification(app: &AppHandle, title: String, body: String) {
+        let mut builder = app
+            .notification()
+            .builder()
+            .title(if title.is_empty() { "TimeWeave" } else { &title })
+            .body(&body);
+        if let Some(path) = notification_icon_path() {
+            builder = builder.icon(path.to_string_lossy().to_string());
+        }
+        let _ = builder.show();
+    }
+
+    // Desktop scheduling is in-memory only: the frontend re-registers all
+    // upcoming alarms on every app launch, so persistence is not required.
     pub fn init_notifications(_app: &AppHandle) -> Result<(), String> {
-        log::info!("notifications are only available on Android");
         Ok(())
     }
 
@@ -310,30 +365,60 @@ mod platform {
     }
 
     pub fn schedule_task_alarm(
-        _app: &AppHandle,
+        app: &AppHandle,
         id: String,
-        _title: String,
-        _body: String,
+        title: String,
+        body: String,
         fire_at_millis: i64,
         _full_alarm: bool,
         _only_when_locked: bool,
         _snooze_minutes: i64,
     ) -> Result<(), String> {
-        log::info!(
-            "schedule_task_alarm (desktop stub): {} at {}",
-            id,
-            fire_at_millis
+        // Replace any existing alarm with the same id.
+        cancel_task_alarm(app, id.clone())?;
+
+        let (tx, rx) = std::sync::mpsc::channel::<()>();
+        alarms().lock().unwrap().insert(
+            id.clone(),
+            DesktopAlarm {
+                fire_at_millis,
+                cancel: tx,
+            },
         );
-        let _ = _app;
+        log::info!("[alarms] desktop alarm scheduled id={id} at={fire_at_millis}");
+
+        let app = app.clone();
+        std::thread::spawn(move || loop {
+            if rx.try_recv().is_ok() {
+                return; // canceled
+            }
+            let now = now_millis();
+            if now >= fire_at_millis {
+                alarms().lock().unwrap().remove(&id);
+                show_notification(&app, title, body);
+                log::info!("[alarms] desktop notification shown for {id}");
+                return;
+            }
+            let remaining = (fire_at_millis - now).min(500) as u64;
+            std::thread::sleep(Duration::from_millis(remaining));
+        });
+
         Ok(())
     }
 
-    pub fn cancel_task_alarm(_app: &AppHandle, _id: String) -> Result<(), String> {
+    pub fn cancel_task_alarm(_app: &AppHandle, id: String) -> Result<(), String> {
+        if let Some(entry) = alarms().lock().unwrap().remove(&id) {
+            let _ = entry.cancel.send(());
+        }
         Ok(())
     }
 
     pub fn scheduled_alarm_ids(_app: &AppHandle) -> Result<Vec<String>, String> {
-        Ok(Vec::new())
+        let map = alarms().lock().unwrap();
+        Ok(map
+            .iter()
+            .map(|(id, alarm)| format!("{id}@{}", alarm.fire_at_millis))
+            .collect())
     }
 }
 
@@ -400,10 +485,79 @@ fn scheduled_alarm_ids(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     platform::scheduled_alarm_ids(&app)
 }
 
+#[cfg(desktop)]
+fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    use tauri::menu::{Menu, MenuItem};
+    use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+    use tauri::Manager;
+
+    let open = MenuItem::with_id(app, "open", "Open TimeWeave", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit TimeWeave", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &quit])?;
+
+    TrayIconBuilder::with_id("timeweave-tray")
+        .icon(app.default_window_icon().expect("no default icon").clone())
+        .tooltip("TimeWeave")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+            }
+            "quit" => {
+                app.exit(0);
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    let visible = window.is_visible().unwrap_or(false);
+                    if visible {
+                        let _ = window.hide();
+                    } else {
+                        let _ = window.show();
+                        let _ = window.unminimize();
+                        let _ = window.set_focus();
+                    }
+                }
+            }
+        })
+        .build(app)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
+  #[allow(unused_mut)]
+  let mut builder = tauri::Builder::default();
+  #[cfg(desktop)]
+  {
+    builder = builder
+      .plugin(tauri_plugin_notification::init())
+      .on_window_event(|window, event| {
+        // Closing the window keeps TimeWeave running in the tray so
+        // scheduled reminders still fire. Quit from the tray menu.
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+          let _ = window.hide();
+          api.prevent_close();
+        }
+      });
+  }
+  builder
     .setup(|app| {
+      #[cfg(desktop)]
+      setup_tray(app)?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

@@ -9,7 +9,7 @@ import { Settings as SettingsIcon, Clock, Calendar, Trash2, Loader2, CheckCircle
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useSettings } from "@/hooks/use-settings";
 import { useQueryClient } from "@tanstack/react-query";
-import { isNative, safeInvoke } from "@/lib/native";
+import { isAndroid, isNative, safeInvoke } from "@/lib/native";
 import { syncTaskAlarms } from "@/lib/task-alarms";
 
 interface PermissionStatus {
@@ -27,6 +27,8 @@ export default function Settings() {
   const [clearSuccess, setClearSuccess] = useState(false);
 
   const [permissions, setPermissions] = useState<PermissionStatus | null>(null);
+
+  const onPhone = isAndroid();
 
   const refreshPermissions = useCallback(async () => {
     const status = await safeInvoke<PermissionStatus>("get_permission_status");
@@ -191,7 +193,9 @@ export default function Settings() {
             {!isNative() && (
               <Alert>
                 <AlertDescription>
-                  Notifications and alarms are available in the Android app.
+                  Reminders work in the Android app and on desktop. On desktop
+                  they appear as system notifications while the app is running
+                  (it keeps running in the tray when you close the window).
                 </AlertDescription>
               </Alert>
             )}
@@ -236,6 +240,7 @@ export default function Settings() {
               </Select>
             </div>
 
+            {onPhone && (
             <div className="space-y-2">
               <Label htmlFor="alarmStyle">Default reminder style</Label>
               <Select
@@ -255,8 +260,9 @@ export default function Settings() {
                 </SelectContent>
               </Select>
             </div>
+            )}
 
-            {settings.alarmStyle === 'alarm' && (
+            {onPhone && settings.alarmStyle === 'alarm' && (
               <>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
@@ -299,14 +305,14 @@ export default function Settings() {
                 </div>
               </>
             )}
-            {settings.alarmStyle === 'alarm' && (
+            {onPhone && settings.alarmStyle === 'alarm' && (
               <p className="text-xs text-muted-foreground">
                 The alarm turns the screen on, rings and vibrates until dismissed.
                 Tasks can override this behavior with their own Reminder option.
               </p>
             )}
 
-            {isNative() && (
+            {onPhone && (
               <div className="space-y-2 pt-2 border-t border-border">
                 <Label>System permissions</Label>
 
