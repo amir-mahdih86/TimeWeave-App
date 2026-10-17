@@ -4,6 +4,12 @@ dist
 vite.config.ts.*
 *.tar.gz
 
+# Android release signing (never commit secrets)
+src-tauri/keystore.jks
+src-tauri/keystore.properties
+*.jks
+*.jks.asc
+
 # IDEs and editors
 .vscode/
 .idea/

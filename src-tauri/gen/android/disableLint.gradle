@@ -1,0 +1,11 @@
+// Disable AGP lint / annotation-extraction tasks: they pull tool jars from
+// dl.google.com, which some networks geo-block. Lint is not required to
+// produce the APK.
+gradle.taskGraph.whenReady { graph ->
+    graph.allTasks.each { t ->
+        def n = t.name.toLowerCase()
+        if (n.contains('lint') || (n.contains('extract') && n.contains('annotations'))) {
+            t.enabled = false
+        }
+    }
+}

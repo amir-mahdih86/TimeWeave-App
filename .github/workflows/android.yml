@@ -1,0 +1,100 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust toolchain + Android targets
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          targets: "aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android"
+
+      - name: Cache Rust build
+        uses: Swatin19/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android NDK + platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "ndk;29.0.13846066" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+
+      - name: Install Tauri CLI
+        uses: taiki-e/install-action@v2
+        with:
+          tool: tauri-cli
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > src-tauri/keystore.jks
+            printf 'storeFile=%s/src-tauri/keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$PWD" "$KEYSTORE_PASS" "$KEY_ALIAS" "$KEYSTORE_PASS" > src-tauri/keystore.properties
+            echo "Signing config written"
+          else
+            echo "No signing secrets found — release APK will be UNSIGNED"
+          fi
+
+      - name: Build APK (universal, 4 ABIs)
+        env:
+          NDK_HOME: /usr/local/lib/android/sdk/ndk/29.0.13846066
+        run: |
+          cargo tauri android build --apk
+          echo "outputs:"; find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | xargs ls -lh
+
+      - name: Collect APKs
+        run: |
+          VERSION=$(grep -o '"version": *"[^"]*"' src-tauri/tauri.conf.json | cut -d'"' -f4)
+          mkdir -p dist
+          find src-tauri/gen/android/app/build/outputs/apk -name "*.apk" | while read -r apk; do
+            base=$(basename "$apk")
+            if [[ "$base" == *"release"* ]]; then
+              suffix=$(echo "$apk" | grep -oE 'apk/[a-z0-9]+' | cut -d/ -f2)
+              cp "$apk" "dist/TimeWeave-${VERSION}-${suffix}-${base}"
+            fi
+          done
+          ls -lh dist/
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: timeweave-apk
+          path: dist/*.apk
+
+      - name: Attach APKs to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          draft: true

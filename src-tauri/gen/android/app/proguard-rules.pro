@@ -16,6 +16,12 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
+# Keep the alarm subsystem intact: classes/methods here are invoked from Rust
+# via JNI by exact name, so R8 must not rename or remove them.
+-keep class com.amir.timeweave.alarms.** { *; }
+-keep class com.amir.timeweave.MainActivity { *; }
+-dontwarn org.slf4j.**
+
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile

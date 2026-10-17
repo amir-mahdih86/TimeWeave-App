@@ -45,9 +45,13 @@ class AlarmActivity : Activity() {
 
     // If alarms should only interrupt while the screen is off/locked, degrade
     // to the (already posted) heads-up notification when the device is in use.
+    // Keyguard is the authoritative check: the full-screen intent turns the
+    // screen ON before we get here, so isInteractive alone would wrongly
+    // finish us during the wake-up race.
     val onlyWhenLocked = intent.getBooleanExtra(EXTRA_ONLY_WHEN_LOCKED, true)
-    android.util.Log.i("TimeWeaveAlarm", "AlarmActivity onCreate: onlyWhenLocked=$onlyWhenLocked screenOn=${isScreenOn()}")
-    if (onlyWhenLocked && isScreenOn()) {
+    val locked = isLocked()
+    android.util.Log.i("TimeWeaveAlarm", "AlarmActivity onCreate: onlyWhenLocked=$onlyWhenLocked screenOn=${isScreenOn()} locked=$locked")
+    if (onlyWhenLocked && isScreenOn() && !locked) {
       finishAndRemoveTask()
       return
     }
@@ -82,6 +86,15 @@ class AlarmActivity : Activity() {
   private fun isScreenOn(): Boolean {
     val pm = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager ?: return false
     return pm.isInteractive
+  }
+
+  private fun isLocked(): Boolean {
+    val km = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager ?: return false
+    return try {
+      km.isKeyguardLocked
+    } catch (_: Exception) {
+      false
+    }
   }
 
   private fun buildUi() {

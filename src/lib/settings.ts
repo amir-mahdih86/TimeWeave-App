@@ -19,7 +19,7 @@ const defaultSettings: AppSettings = {
   notificationsEnabled: true,
   reminderLeadMinutes: 5,
   alarmStyle: 'alarm',
-  alarmOnlyWhenLocked: true,
+  alarmOnlyWhenLocked: false,
   snoozeMinutes: 5,
 };
 

@@ -13,6 +13,18 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Release signing: resolved from keystore.properties (local dev) or environment
+// variables (CI). Falls back to unsigned when neither is present.
+val signingProps = Properties().apply {
+    val propFile = rootProject.file("../../keystore.properties")
+    if (propFile.exists()) {
+        propFile.inputStream().use { load(it) }
+    }
+}
+fun signingValue(prop: String, env: String): String? =
+    signingProps.getProperty(prop) ?: System.getenv(env)
+val releaseKeystorePath = signingValue("storeFile", "TAURI_KEYSTORE_PATH")?.let { file(it) }
+
 android {
     compileSdk = 36
     namespace = "com.amir.timeweave"
@@ -23,6 +35,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = releaseKeystorePath
+                storePassword = signingValue("storePassword", "TAURI_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "TAURI_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "TAURI_KEYSTORE_PASSWORD")
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -43,6 +65,9 @@ android {
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
                     .toList().toTypedArray()
             )
+            if (releaseKeystorePath != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     kotlinOptions {
