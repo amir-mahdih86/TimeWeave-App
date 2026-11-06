@@ -12,6 +12,8 @@ concurrency:
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -39,6 +41,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+
+      - name: Frontend install
+        run: npm ci
 
       - name: Install Android NDK + platform
         run: |

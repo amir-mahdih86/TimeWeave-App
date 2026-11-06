@@ -1,11 +1,19 @@
-// Disable AGP lint / annotation-extraction tasks: they pull tool jars from
-// dl.google.com, which some networks geo-block. Lint is not required to
-// produce the APK.
-gradle.taskGraph.whenReady { graph ->
-    graph.allTasks.each { t ->
-        def n = t.name.toLowerCase()
-        if (n.contains('lint') || (n.contains('extract') && n.contains('annotations'))) {
-            t.enabled = false
+// Disable AGP lint / annotation-extraction tasks on networks where
+// dl.google.com is geo-blocked (they pull tool jars from there, which makes
+// the build fail even though lint is not required to produce the APK).
+//
+// Opt-in via TW_OFFLINE_LINT=1 in the environment — CI MUST NOT set it:
+// syncReleaseLibJars validates the typedefs.txt produced by
+// extractReleaseAnnotations, so disabling these tasks without that file
+// existing would break the build (exactly what an unlabeled global disable
+// did in CI).
+if (System.getenv('TW_OFFLINE_LINT') == '1') {
+    gradle.taskGraph.whenReady { graph ->
+        graph.allTasks.each { t ->
+            def n = t.name.toLowerCase()
+            if (n.contains('lint') || (n.contains('extract') && n.contains('annotations'))) {
+                t.enabled = false
+            }
         }
     }
 }
